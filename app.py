@@ -17,7 +17,10 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Ensure folder exists
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 # Database configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ads.db'
+# Use environment variable for production DB path, fallback to local sqlite
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or \
+    'sqlite:///' + os.path.join(basedir, 'ads.db')
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -36,7 +39,7 @@ class Image(db.Model):
     filename = db.Column(db.String(100), nullable=False)
     ad_id = db.Column(db.Integer, db.ForeignKey('ad.id'), nullable=False)
 
-# Create DB tables
+# Create DB tables if they don't exist
 with app.app_context():
     db.create_all()
 
@@ -69,7 +72,7 @@ def post_ad():
                 db.session.add(new_image)
 
         db.session.commit()
-        return redirect('/ads')
+        return redirect(url_for('show_ads'))
     return render_template('post.html')
 
 @app.route('/ads')
@@ -88,7 +91,7 @@ def delete_ad(ad_id):
             pass
     db.session.delete(ad_to_delete)
     db.session.commit()
-    return redirect('/ads')
+    return redirect(url_for('show_ads'))
 
 @app.route('/edit/<int:ad_id>', methods=['GET', 'POST'])
 def edit_ad(ad_id):
@@ -126,9 +129,11 @@ def edit_ad(ad_id):
                 db.session.add(new_image)
 
         db.session.commit()
-        return redirect('/ads')
+        return redirect(url_for('show_ads'))
 
     return render_template('edit.html', ad=ad)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Bind to 0.0.0.0 and use port from env var for Render compatibility
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
