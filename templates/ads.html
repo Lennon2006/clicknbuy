@@ -1,63 +1,97 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>All Ads - Click N Buy</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Ads - Click n Buy</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
+            margin: 0;
+            background-color: #f4f4f4;
         }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
         .ad {
-            border: 1px solid #ccc;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             padding: 15px;
             margin-bottom: 20px;
-            border-radius: 8px;
         }
+
         .ad h2 {
             margin-top: 0;
+            color: #444;
         }
+
+        .ad p {
+            margin: 5px 0;
+        }
+
         .ad-images {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-            margin-bottom: 10px;
+            margin: 10px 0;
         }
+
         .ad-images img {
-            max-width: 200px;
-            height: auto;
-            border-radius: 4px;
+            width: 100%;
+            max-width: 150px;
+            border-radius: 6px;
         }
-        form.delete-form {
-            display: inline;
+
+        .actions {
+            margin-top: 10px;
         }
-        button.delete-button {
-            background-color: #e74c3c;
-            border: none;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
+
+        .delete-button, .edit-button {
+            padding: 8px 12px;
             font-size: 14px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+            display: inline-block;
         }
-        button.delete-button:hover {
+
+        .delete-button {
+            background-color: #e74c3c;
+        }
+
+        .delete-button:hover {
             background-color: #c0392b;
         }
-        a.edit-button {
-            display: inline-block;
+
+        .edit-button {
             background-color: #3498db;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            text-decoration: none;
             margin-left: 10px;
-            font-size: 14px;
         }
-        a.edit-button:hover {
+
+        .edit-button:hover {
             background-color: #2980b9;
+        }
+
+        @media (max-width: 600px) {
+            .ad-images img {
+                max-width: 100px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
         }
     </style>
 </head>
 <body>
+
     <h1>All Posted Ads</h1>
 
     {% if ads %}
@@ -73,16 +107,17 @@
                     </div>
                 {% endif %}
 
-                <p>{{ ad.description }}</p>
+                <p><strong>Description:</strong> {{ ad.description }}</p>
                 <p><strong>Price:</strong> N${{ ad.price }}</p>
                 <p><strong>Category:</strong> {{ ad.category }}</p>
                 <p><strong>Contact:</strong> {{ ad.contact }}</p>
 
-                <form class="delete-form" action="/delete/{{ ad.id }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this ad?');">
-                    <button type="submit" class="delete-button">Delete</button>
-                </form>
-
-                <a href="/edit/{{ ad.id }}" class="edit-button">Edit</a>
+                <div class="actions">
+                    <form class="delete-form" action="/delete/{{ ad.id }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this ad?');">
+                        <button type="submit" class="delete-button">Delete</button>
+                    </form>
+                    <a href="/edit/{{ ad.id }}" class="edit-button">Edit</a>
+                </div>
             </div>
         {% endfor %}
     {% else %}
@@ -90,7 +125,10 @@
     {% endif %}
 
     <br>
-    <a href="/post">Post Another Ad</a> |
-    <a href="/">Back to Home</a>
+    <div style="text-align: center;">
+        <a href="/post">Post Another Ad</a> |
+        <a href="/">Back to Home</a>
+    </div>
+
 </body>
 </html>
