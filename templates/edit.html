@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Ad - Click N Buy</title>
+</head>
+<body>
+    <h2>Edit Your Ad</h2>
+
+    {% if ad.images %}
+        <p><strong>Current Images (check to delete):</strong></p>
+        <form method="POST" enctype="multipart/form-data">
+            {% for image in ad.images %}
+                <div style="display: inline-block; margin-right: 10px; text-align: center;">
+                    <img src="{{ url_for('static', filename='uploads/' + image.filename) }}" alt="Ad Image" style="max-width:200px; display:block;">
+                    <label>
+                        <input type="checkbox" name="delete_images" value="{{ image.id }}">
+                        Delete
+                    </label>
+                </div>
+            {% endfor %}
+            <br><br>
+
+            <label>Title:</label><br>
+            <input type="text" name="title" value="{{ ad.title }}" required><br>
+
+            <label>Description:</label><br>
+            <textarea name="description" required>{{ ad.description }}</textarea><br>
+
+            <label>Price:</label><br>
+            <input type="text" name="price" value="{{ ad.price }}" required><br>
+
+            <label>Category:</label><br>
+            <input type="text" name="category" value="{{ ad.category }}" required><br>
+
+            <label>Contact:</label><br>
+            <input type="text" name="contact" value="{{ ad.contact }}" required><br>
+
+            <label>Add More Images (optional):</label><br>
+            <input type="file" name="images" multiple><br><br>
+
+            <input type="submit" value="Update Ad">
+        </form>
+    {% else %}
+        <form method="POST" enctype="multipart/form-data">
+            <!-- Same form fields but without delete checkboxes -->
+            <label>Title:</label><br>
+            <input type="text" name="title" value="{{ ad.title }}" required><br>
+
+            <label>Description:</label><br>
+            <textarea name="description" required>{{ ad.description }}</textarea><br>
+
+            <label>Price:</label><br>
+            <input type="text" name="price" value="{{ ad.price }}" required><br>
+
+            <label>Category:</label><br>
+            <input type="text" name="category" value="{{ ad.category }}" required><br>
+
+            <label>Contact:</label><br>
+            <input type="text" name="contact" value="{{ ad.contact }}" required><br>
+
+            <label>Add More Images (optional):</label><br>
+            <input type="file" name="images" multiple><br><br>
+
+            <input type="submit" value="Update Ad">
+        </form>
+    {% endif %}
+
+    <br>
+    <a href="/ads">Back to All Ads</a>
+</body>
+</html>
