@@ -99,11 +99,16 @@ def register():
     
     return render_template('register.html')
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        print("FORM DATA RECEIVED:", request.form)  # Debug print to see all form data
+
         identifier = request.form.get('username_or_email')
         password = request.form.get('password')
+
+        print(f"Identifier: {identifier}, Password: {'***' if password else None}")  # Mask password in logs
 
         if not identifier or not password:
             flash("Both fields are required.", "warning")
@@ -123,6 +128,7 @@ def login():
             return redirect(url_for('login'))
 
     return render_template('login.html')
+
 
 @app.route('/logout')
 def logout():
