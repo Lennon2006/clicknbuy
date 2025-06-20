@@ -102,8 +102,13 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        identifier = request.form['username_or_email']
-        password = request.form['password']
+        identifier = request.form.get('username_or_email')
+        password = request.form.get('password')
+
+        if not identifier or not password:
+            flash("Both fields are required.", "warning")
+            return redirect(url_for('login'))
+
         user = User.query.filter(
             (User.username == identifier) | (User.email == identifier)
         ).first()
@@ -116,7 +121,7 @@ def login():
         else:
             flash("Invalid login details.", "danger")
             return redirect(url_for('login'))
-    
+
     return render_template('login.html')
 
 @app.route('/logout')
