@@ -5,6 +5,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
 import os
+import time 
+import uuid  # for generating unique filenames
+
+
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -143,6 +147,8 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for('home'))
 
+import time  # Add this import at the top of your app.py
+
 @app.route('/post', methods=['GET', 'POST'])
 @login_required
 def post_ad():
@@ -161,15 +167,18 @@ def post_ad():
         for image in request.files.getlist('images'):
             if image and allowed_file(image.filename):
                 filename = secure_filename(image.filename)
-                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                unique_name = f"user_{session['user_id']}_{uuid.uuid4().hex}_{filename}"
+                path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
                 image.save(path)
-                db.session.add(Image(filename=filename, ad_id=new_ad.id))
+                db.session.add(Image(filename=unique_name, ad_id=new_ad.id))
 
         db.session.commit()
         flash("Ad posted successfully.", "success")
         return redirect(url_for('show_ads'))
 
     return render_template('post.html')
+
+
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
@@ -196,6 +205,47 @@ def profile():
 
     return render_template('profile.html', user=user)
 
+
+@app.route('/edit_profile', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    user = User.query.get(session['user_id'])
+
+    if request.method == 'POST':
+        new_username = request.form.get('username').strip()
+        new_email = request.form.get('email').strip()
+        new_password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+
+        if not new_username or not new_email:
+            flash("Username and email are required.", "danger")
+            return redirect(url_for('edit_profile'))
+
+        if new_username != user.username and User.query.filter_by(username=new_username).first():
+            flash("Username already taken.", "danger")
+            return redirect(url_for('edit_profile'))
+
+        if new_email != user.email and User.query.filter_by(email=new_email).first():
+            flash("Email already in use.", "danger")
+            return redirect(url_for('edit_profile'))
+
+        user.username = new_username
+        user.email = new_email
+
+        if new_password:
+            if new_password != confirm_password:
+                flash("Passwords do not match.", "danger")
+                return redirect(url_for('edit_profile'))
+            user.set_password(new_password)
+
+        db.session.commit()
+        session['username'] = user.username
+        flash("Profile updated successfully.", "success")
+        return redirect(url_for('profile'))
+
+    return render_template('edit_profile.html', user=user)
+
+
 @app.route('/ads')
 def show_ads():
     ads = Ad.query.all()
@@ -216,22 +266,25 @@ def edit_ad(ad_id):
         ad.category = request.form['category']
         ad.contact = request.form['contact']
 
+        # Delete selected images
         delete_ids = request.form.getlist('delete_images')
         for img_id in delete_ids:
             img = Image.query.get(int(img_id))
-            if img:
+            if img and img.ad_id == ad.id:
                 try:
                     os.remove(os.path.join(app.config['UPLOAD_FOLDER'], img.filename))
                 except:
                     pass
                 db.session.delete(img)
 
+        # Add new uploaded images
         for image in request.files.getlist('images'):
             if image and allowed_file(image.filename):
                 filename = secure_filename(image.filename)
-                path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                unique_name = f"user_{session['user_id']}_{uuid.uuid4().hex}_{filename}"
+                path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
                 image.save(path)
-                db.session.add(Image(filename=filename, ad_id=ad.id))
+                db.session.add(Image(filename=unique_name, ad_id=ad.id))
 
         db.session.commit()
         flash("Ad updated.", "success")

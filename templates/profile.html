@@ -6,15 +6,25 @@
   <title>{{ user.username }}'s Profile</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <style>
-  .nav-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid #ccc;
-  }
-</style>
+    .profile-pic {
+      width: 130px;
+      height: 130px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 3px solid #0d6efd;
+    }
 
+    @media (max-width: 576px) {
+      .profile-pic {
+        width: 100px;
+        height: 100px;
+      }
+    }
+
+    .list-group-item .btn {
+      width: 80px;
+    }
+  </style>
 </head>
 <body class="bg-light">
 
@@ -24,48 +34,36 @@
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
       <span class="navbar-toggler-icon"></span>
     </button>
-
     <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
       <ul class="navbar-nav align-items-center">
         <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('show_ads') }}">View Ads</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('post_ad') }}">Post Ad</a></li>
-
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            {% if user.profile_pic %}
-              <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" alt="Avatar" class="nav-avatar me-2">
-            {% else %}
-              <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Avatar" class="nav-avatar me-2">
-            {% endif %}
-            <span>{{ user.username }}</span>
-          </a>
-          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
-            <li><a class="dropdown-item" href="{{ url_for('profile') }}">Profile</a></li>
-            <li><a class="dropdown-item" href="#">Edit Profile</a></li>
-            <li><a class="dropdown-item" href="#">Change Password</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">Logout</a></li>
-          </ul>
+        <li class="nav-item d-none d-sm-block">
+          {% if user.profile_pic %}
+            <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" alt="Avatar" class="rounded-circle" width="32" height="32">
+          {% else %}
+            <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Avatar" class="rounded-circle" width="32" height="32">
+          {% endif %}
         </li>
+        <li class="nav-item"><span class="nav-link">Hi, {{ user.username }}</span></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
       </ul>
     </div>
   </div>
 </nav>
 
-
 <div class="container my-5">
   <div class="row justify-content-center">
     <div class="col-12 col-md-8 col-lg-6 bg-white p-4 rounded shadow-sm">
-
+      
       <div class="text-center mb-4">
         {% if user.profile_pic %}
           <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" alt="Profile Picture" class="profile-pic mb-3" />
         {% else %}
           <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Default Profile Picture" class="profile-pic mb-3" />
         {% endif %}
-
-        <form method="POST" enctype="multipart/form-data" action="{{ url_for('profile') }}" class="d-inline-block w-100">
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('profile') }}" class="w-100">
           <label for="profile_pic" class="form-label">Update Profile Picture</label>
           <input class="form-control form-control-sm" type="file" id="profile_pic" name="profile_pic" accept="image/*" required />
           <button type="submit" class="btn btn-primary btn-sm mt-2 w-100">Upload</button>
@@ -74,6 +72,10 @@
 
       <h2 class="mb-3 text-center">Welcome, <strong>{{ user.username }}</strong>!</h2>
       <p class="text-center"><strong>Email:</strong> {{ user.email }}</p>
+
+      <div class="text-center mt-2 mb-4">
+        <a href="{{ url_for('edit_profile') }}" class="btn btn-outline-primary btn-sm">Edit Profile Info</a>
+      </div>
 
       <h3 class="mt-4 mb-3">Your Ads</h3>
 
@@ -85,8 +87,8 @@
                 <strong>{{ ad.title }}</strong> — <span class="text-primary fw-semibold">{{ ad.price }}</span><br />
                 <small class="text-muted">{{ ad.category }}</small>
               </div>
-              <div>
-                <a href="{{ url_for('edit_ad', ad_id=ad.id) }}" class="btn btn-sm btn-outline-primary me-2 mb-2 mb-md-0">Edit</a>
+              <div class="d-flex">
+                <a href="{{ url_for('edit_ad', ad_id=ad.id) }}" class="btn btn-sm btn-outline-primary me-2">Edit</a>
                 <form action="{{ url_for('delete_ad', ad_id=ad.id) }}" method="POST" class="d-inline">
                   <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
                 </form>
@@ -95,7 +97,7 @@
           {% endfor %}
         </div>
       {% else %}
-        <p class="text-muted">You have not posted any ads yet.</p>
+        <p class="text-center">You have not posted any ads yet.</p>
       {% endif %}
 
       <div class="mt-4">
