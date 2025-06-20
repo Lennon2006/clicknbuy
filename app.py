@@ -164,6 +164,13 @@ def post_ad():
 
     return render_template('post.html')
 
+@app.route('/profile')
+@login_required
+def profile():
+    user = User.query.get(session['user_id'])
+    return render_template('profile.html', user=user)
+
+
 @app.route('/ads')
 def show_ads():
     ads = Ad.query.all()
