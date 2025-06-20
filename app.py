@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate  # <-- Import Flask-Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
@@ -18,6 +19,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.secret_key = 'replace_this_with_a_strong_random_secret_key'
 
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)  # <-- Initialize Flask-Migrate
 
 # Models
 class User(db.Model):
@@ -25,6 +27,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
+    profile_pic = db.Column(db.String(120), nullable=True)  # New field for profile picture filename
     ads = db.relationship('Ad', backref='owner', lazy=True)
 
     def set_password(self, password):
@@ -64,6 +67,16 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def save_profile_pic(file):
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        # To avoid name collisions, you can prefix with user ID or a timestamp
+        filename = f"user_{session['user_id']}_{filename}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        return filename
+    return None
+
 # Routes
 @app.route('/')
 def home():
@@ -99,16 +112,11 @@ def register():
     
     return render_template('register.html')
 
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        print("FORM DATA RECEIVED:", request.form)  # Debug print to see all form data
-
         identifier = request.form.get('username_or_email')
         password = request.form.get('password')
-
-        print(f"Identifier: {identifier}, Password: {'***' if password else None}")  # Mask password in logs
 
         if not identifier or not password:
             flash("Both fields are required.", "warning")
@@ -128,7 +136,6 @@ def login():
             return redirect(url_for('login'))
 
     return render_template('login.html')
-
 
 @app.route('/logout')
 def logout():
@@ -164,12 +171,30 @@ def post_ad():
 
     return render_template('post.html')
 
-@app.route('/profile')
+@app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
     user = User.query.get(session['user_id'])
-    return render_template('profile.html', user=user)
 
+    if request.method == 'POST':
+        # Handle profile picture upload
+        file = request.files.get('profile_pic')
+        if file and allowed_file(file.filename):
+            # Delete old profile pic if exists
+            if user.profile_pic:
+                old_path = os.path.join(app.config['UPLOAD_FOLDER'], user.profile_pic)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+            # Save new profile pic
+            filename = save_profile_pic(file)
+            user.profile_pic = filename
+            db.session.commit()
+            flash("Profile picture updated.", "success")
+        else:
+            flash("Invalid file or no file selected.", "warning")
+        return redirect(url_for('profile'))
+
+    return render_template('profile.html', user=user)
 
 @app.route('/ads')
 def show_ads():
