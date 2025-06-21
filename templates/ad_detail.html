@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ ad.title }} - Details</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    .gallery {
+      display: flex;
+      overflow-x: auto;
+      gap: 10px;
+      scroll-snap-type: x mandatory;
+    }
+
+    .gallery img {
+      flex-shrink: 0;
+      width: 100%;
+      max-width: 300px;
+      height: 200px;
+      object-fit: contain;
+      border-radius: 8px;
+      scroll-snap-align: start;
+      background-color: #f8f9fa;
+    }
+
+    .gallery::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    .gallery::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
+  <div class="container">
+    <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('show_ads') }}">View Ads</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('post_ad') }}">Post Ad</a></li>
+        {% if session.get('user_id') %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
+        {% else %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6 bg-white p-4 rounded shadow-sm">
+      {% if ad.images %}
+        <div class="gallery mb-4">
+          {% for img in ad.images %}
+            <img src="{{ url_for('static', filename='uploads/' ~ img.filename) }}" alt="Ad Image">
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <h2>{{ ad.title }}</h2>
+      <p><strong>Price:</strong> <span class="text-primary">{{ ad.price }}</span></p>
+      <p><strong>Category:</strong> {{ ad.category }}</p>
+      <p><strong>Contact:</strong> {{ ad.contact }}</p>
+      <p class="mt-3"><strong>Description:</strong></p>
+      <p>{{ ad.description }}</p>
+
+      <a href="{{ url_for('show_ads') }}" class="btn btn-outline-secondary mt-3">← Back to Ads</a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
