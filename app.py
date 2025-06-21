@@ -81,6 +81,7 @@ class Message(db.Model):
     sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    is_read = db.Column(db.Boolean, default=False)  # <-- new field
     sender = db.relationship('User')
 
 with app.app_context():
@@ -150,6 +151,8 @@ def register():
         return redirect(url_for('login'))
     
     return render_template('register.html')
+
+
 
 
 #Login route
@@ -324,7 +327,7 @@ def edit_profile():
         return redirect(url_for('profile'))
 
     return render_template('edit_profile.html', user=user)
-
+#ADS
 @app.route('/ads')
 def show_ads():
     query = request.args.get('q', '').strip().lower()
@@ -344,7 +347,7 @@ def show_ads():
     categories = sorted(set(cat for (cat,) in all_categories if cat))
 
     return render_template('ads.html', ads=ads.all(), categories=categories)
-
+#EDIT
 @app.route('/edit/<int:ad_id>', methods=['GET', 'POST'])
 @login_required
 def edit_ad(ad_id):
@@ -429,14 +432,27 @@ def messages(conversation_id):
             msg = Message(
                 conversation_id=conversation_id,
                 sender_id=user_id,
-                content=content
+                content=content,
+                is_read=True  # Mark sender's own message as read by themself
             )
             db.session.add(msg)
             db.session.commit()
             return redirect(url_for('messages', conversation_id=conversation_id))
 
+    # Mark unread messages *received* by current user as read
+    unread_msgs = Message.query.filter(
+        Message.conversation_id == conversation_id,
+        Message.is_read == False,
+        Message.sender_id != user_id
+    ).all()
+    for msg in unread_msgs:
+        msg.is_read = True
+    if unread_msgs:
+        db.session.commit()
+
     messages_list = Message.query.filter_by(conversation_id=conversation_id).order_by(Message.timestamp.asc()).all()
     return render_template('messages.html', conversation=convo, messages=messages_list)
+
 
 @app.route('/start_conversation/<int:ad_id>', methods=['GET', 'POST'])
 @login_required
@@ -463,6 +479,27 @@ def start_conversation(ad_id):
 @app.errorhandler(403)
 def forbidden(error):
     return render_template("403.html"), 403
+
+#Inbox
+@app.route('/inbox')
+@login_required
+def inbox():
+    user_id = int(session['user_id'])
+    conversations = Conversation.query.filter(
+        (Conversation.buyer_id == user_id) | (Conversation.seller_id == user_id)
+    ).order_by(Conversation.id.desc()).all()
+
+    # Count unread messages per conversation for current user
+    unread_counts = {}
+    for convo in conversations:
+        count = Message.query.filter(
+            Message.conversation_id == convo.id,
+            Message.is_read == False,
+            Message.sender_id != user_id
+        ).count()
+        unread_counts[convo.id] = count
+
+    return render_template('inbox.html', conversations=conversations, unread_counts=unread_counts)
 
 
 if __name__ == '__main__':
