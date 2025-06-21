@@ -7,6 +7,7 @@ from functools import wraps
 import os
 import uuid
 from datetime import datetime
+from flask import request, jsonify
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -48,6 +49,7 @@ class Ad(db.Model):
     price = db.Column(db.String(50))
     category = db.Column(db.String(50))
     contact = db.Column(db.String(100))
+    location = db.Column(db.String(100))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     images = db.relationship('Image', backref='ad', lazy=True, cascade="all, delete-orphan")
 
@@ -165,6 +167,25 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for('home'))
 
+@app.route('/edit_message/<int:message_id>', methods=['POST'])
+def edit_message(message_id):
+    msg = Message.query.get_or_404(message_id)
+    if msg.sender_id != session['user_id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    msg.content = request.json['content']
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/delete_message/<int:message_id>', methods=['POST'])
+def delete_message(message_id):
+    msg = Message.query.get_or_404(message_id)
+    if msg.sender_id != session['user_id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    db.session.delete(msg)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 @app.route('/post', methods=['GET', 'POST'])
 @login_required
 def post_ad():
@@ -175,6 +196,7 @@ def post_ad():
             price=request.form['price'],
             category=request.form['category'],
             contact=request.form['contact'],
+            location=request.form['location'],
             user_id=int(session['user_id'])
         )
         db.session.add(new_ad)
@@ -289,6 +311,8 @@ def edit_ad(ad_id):
         ad.price = request.form['price']
         ad.category = request.form['category']
         ad.contact = request.form['contact']
+        ad.location = request.form['location']
+
 
         # Delete selected images
         delete_ids = request.form.getlist('delete_images')

@@ -73,6 +73,7 @@
       <p><strong>Contact:</strong> {{ ad.contact }}</p>
       <p><strong>Description:</strong></p>
       <p>{{ ad.description }}</p>
+      <p><strong>Location:</strong> {{ ad.location }}</p>
 
       {% if session.get('user_id') %}
         {% if session['user_id'] != ad.user_id %}
