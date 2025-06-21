@@ -248,8 +248,23 @@ def edit_profile():
 
 @app.route('/ads')
 def show_ads():
-    ads = Ad.query.all()
-    return render_template('ads.html', ads=ads)
+    query = request.args.get('q', '').strip().lower()
+    selected_category = request.args.get('category', '')
+
+    ads = Ad.query
+
+    if query:
+        ads = ads.filter(
+            (Ad.title.ilike(f"%{query}%")) |
+            (Ad.description.ilike(f"%{query}%"))
+        )
+    if selected_category:
+        ads = ads.filter_by(category=selected_category)
+
+    all_categories = db.session.query(Ad.category).distinct().all()
+    categories = sorted(set(cat for (cat,) in all_categories if cat))
+
+    return render_template('ads.html', ads=ads.all(), categories=categories)
 
 @app.route('/edit/<int:ad_id>', methods=['GET', 'POST'])
 @login_required
@@ -310,6 +325,13 @@ def delete_ad(ad_id):
     db.session.commit()
     flash("Ad deleted.", "info")
     return redirect(url_for('show_ads'))
+
+@app.route('/ads/<int:ad_id>')
+def ad_detail(ad_id):
+    ad = Ad.query.get_or_404(ad_id)
+    return render_template('ad_detail.html', ad=ad)
+
+   
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
