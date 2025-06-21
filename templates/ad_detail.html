@@ -3,40 +3,35 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{{ ad.title }} - Details</title>
+  <title>{{ ad.title }} - Click N Buy</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <style>
-    .gallery {
-      display: flex;
-      overflow-x: auto;
-      gap: 10px;
-      scroll-snap-type: x mandatory;
-    }
-
-    .gallery img {
-      flex-shrink: 0;
+    .main-image {
       width: 100%;
-      max-width: 300px;
-      height: 200px;
+      max-height: 400px;
       object-fit: contain;
       border-radius: 8px;
-      scroll-snap-align: start;
-      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+      cursor: zoom-in;
     }
-
-    .gallery::-webkit-scrollbar {
-      height: 8px;
+    .thumbnail {
+      height: 75px;
+      width: auto;
+      margin: 5px;
+      border-radius: 5px;
+      object-fit: cover;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: border-color 0.3s ease;
     }
-
-    .gallery::-webkit-scrollbar-thumb {
-      background: #ccc;
-      border-radius: 10px;
+    .thumbnail.selected {
+      border-color: #0d6efd;
     }
   </style>
 </head>
 <body class="bg-light">
 
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
   <div class="container">
     <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -47,40 +42,57 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('show_ads') }}">View Ads</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('post_ad') }}">Post Ad</a></li>
-        {% if session.get('user_id') %}
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
-        {% else %}
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
-        {% endif %}
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
       </ul>
     </div>
   </div>
 </nav>
 
-<div class="container">
-  <div class="row justify-content-center">
-    <div class="col-12 col-md-8 col-lg-6 bg-white p-4 rounded shadow-sm">
+<div class="container my-5">
+  <a href="{{ url_for('show_ads') }}" class="btn btn-outline-secondary mb-3">&larr; Back to Ads</a>
+
+  <div class="row">
+    <div class="col-md-6 mb-4">
       {% if ad.images %}
-        <div class="gallery mb-4">
+        <img id="mainImage" src="{{ url_for('static', filename='uploads/' ~ ad.images[0].filename) }}" alt="{{ ad.title }}" class="main-image mb-3" />
+        <div class="d-flex flex-wrap">
           {% for img in ad.images %}
-            <img src="{{ url_for('static', filename='uploads/' ~ img.filename) }}" alt="Ad Image">
+            <img src="{{ url_for('static', filename='uploads/' ~ img.filename) }}" alt="Thumbnail" class="thumbnail {% if loop.first %}selected{% endif %}" />
           {% endfor %}
         </div>
+      {% else %}
+        <img src="{{ url_for('static', filename='images/no-image.png') }}" alt="No Image" class="main-image" />
       {% endif %}
+    </div>
 
+    <div class="col-md-6">
       <h2>{{ ad.title }}</h2>
-      <p><strong>Price:</strong> <span class="text-primary">{{ ad.price }}</span></p>
+      <h4 class="text-primary mb-3">{{ ad.price }}</h4>
       <p><strong>Category:</strong> {{ ad.category }}</p>
       <p><strong>Contact:</strong> {{ ad.contact }}</p>
-      <p class="mt-3"><strong>Description:</strong></p>
+      <p><strong>Description:</strong></p>
       <p>{{ ad.description }}</p>
-
-      <a href="{{ url_for('show_ads') }}" class="btn btn-outline-secondary mt-3">← Back to Ads</a>
     </div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const mainImage = document.getElementById('mainImage');
+  const thumbnails = document.querySelectorAll('.thumbnail');
+
+  thumbnails.forEach(thumb => {
+    thumb.addEventListener('click', () => {
+      // Remove selected class from all thumbnails
+      thumbnails.forEach(t => t.classList.remove('selected'));
+      // Add selected to clicked thumb
+      thumb.classList.add('selected');
+      // Change main image src
+      mainImage.src = thumb.src;
+    });
+  });
+</script>
+
 </body>
 </html>
