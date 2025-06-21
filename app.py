@@ -1,14 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate  # <-- Import Flask-Migrate
+from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
 import os
-import time 
-import uuid  # for generating unique filenames
-
-
+import uuid
+from datetime import datetime
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -20,10 +18,10 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'ads.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = 'replace_this_with_a_strong_random_secret_key'
+app.secret_key = os.environ.get('SECRET_KEY') or 'replace_with_a_strong_random_secret_key'
 
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)  # <-- Initialize Flask-Migrate
+migrate = Migrate(app, db)
 
 # Models
 class User(db.Model):
@@ -31,8 +29,11 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    profile_pic = db.Column(db.String(120), nullable=True)  # New field for profile picture filename
+    profile_pic = db.Column(db.String(120), nullable=True)
     ads = db.relationship('Ad', backref='owner', lazy=True)
+    # Relationships for messaging
+    sent_conversations = db.relationship('Conversation', foreign_keys='Conversation.seller_id', backref='seller', lazy=True)
+    received_conversations = db.relationship('Conversation', foreign_keys='Conversation.buyer_id', backref='buyer', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -55,6 +56,23 @@ class Image(db.Model):
     filename = db.Column(db.String(100), nullable=False)
     ad_id = db.Column(db.Integer, db.ForeignKey('ad.id'), nullable=False)
 
+# Messaging models
+class Conversation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    buyer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    seller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    ad_id = db.Column(db.Integer, db.ForeignKey('ad.id'), nullable=False)
+    messages = db.relationship('Message', backref='conversation', lazy=True, cascade='all, delete-orphan')
+    ad = db.relationship('Ad')
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    sender = db.relationship('User')
+
 with app.app_context():
     db.create_all()
 
@@ -74,14 +92,14 @@ def login_required(f):
 def save_profile_pic(file):
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        # To avoid name collisions, you can prefix with user ID or a timestamp
-        filename = f"user_{session['user_id']}_{filename}"
+        filename = f"user_{session['user_id']}_{uuid.uuid4().hex}_{filename}"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         return filename
     return None
 
 # Routes
+
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -147,8 +165,6 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for('home'))
 
-import time  # Add this import at the top of your app.py
-
 @app.route('/post', methods=['GET', 'POST'])
 @login_required
 def post_ad():
@@ -159,7 +175,7 @@ def post_ad():
             price=request.form['price'],
             category=request.form['category'],
             contact=request.form['contact'],
-            user_id=session['user_id']
+            user_id=int(session['user_id'])
         )
         db.session.add(new_ad)
         db.session.commit()
@@ -178,23 +194,18 @@ def post_ad():
 
     return render_template('post.html')
 
-
-
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    user = User.query.get(session['user_id'])
+    user = User.query.get(int(session['user_id']))
 
     if request.method == 'POST':
-        # Handle profile picture upload
         file = request.files.get('profile_pic')
         if file and allowed_file(file.filename):
-            # Delete old profile pic if exists
             if user.profile_pic:
                 old_path = os.path.join(app.config['UPLOAD_FOLDER'], user.profile_pic)
                 if os.path.exists(old_path):
                     os.remove(old_path)
-            # Save new profile pic
             filename = save_profile_pic(file)
             user.profile_pic = filename
             db.session.commit()
@@ -205,11 +216,10 @@ def profile():
 
     return render_template('profile.html', user=user)
 
-
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
-    user = User.query.get(session['user_id'])
+    user = User.query.get(int(session['user_id']))
 
     if request.method == 'POST':
         new_username = request.form.get('username').strip()
@@ -245,7 +255,6 @@ def edit_profile():
 
     return render_template('edit_profile.html', user=user)
 
-
 @app.route('/ads')
 def show_ads():
     query = request.args.get('q', '').strip().lower()
@@ -270,7 +279,7 @@ def show_ads():
 @login_required
 def edit_ad(ad_id):
     ad = Ad.query.get_or_404(ad_id)
-    if ad.user_id != session['user_id']:
+    if ad.user_id != int(session['user_id']):
         flash("You do not have permission to edit this ad.", "danger")
         return redirect(url_for('show_ads'))
 
@@ -288,8 +297,8 @@ def edit_ad(ad_id):
             if img and img.ad_id == ad.id:
                 try:
                     os.remove(os.path.join(app.config['UPLOAD_FOLDER'], img.filename))
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Error deleting image file: {e}")
                 db.session.delete(img)
 
         # Add new uploaded images
@@ -311,15 +320,15 @@ def edit_ad(ad_id):
 @login_required
 def delete_ad(ad_id):
     ad = Ad.query.get_or_404(ad_id)
-    if ad.user_id != session['user_id']:
+    if ad.user_id != int(session['user_id']):
         flash("You do not have permission to delete this ad.", "danger")
         return redirect(url_for('show_ads'))
 
     for img in ad.images:
         try:
             os.remove(os.path.join(app.config['UPLOAD_FOLDER'], img.filename))
-        except:
-            pass
+        except Exception as e:
+            print(f"Error deleting image file: {e}")
 
     db.session.delete(ad)
     db.session.commit()
@@ -331,7 +340,52 @@ def ad_detail(ad_id):
     ad = Ad.query.get_or_404(ad_id)
     return render_template('ad_detail.html', ad=ad)
 
-   
+# Messaging routes
+
+@app.route('/messages/<int:conversation_id>', methods=['GET', 'POST'])
+@login_required
+def messages(conversation_id):
+    convo = Conversation.query.get_or_404(conversation_id)
+    user_id = int(session['user_id'])
+    if user_id not in [convo.buyer_id, convo.seller_id]:
+        flash("Access denied.", "danger")
+        return redirect(url_for('home'))
+
+    if request.method == 'POST':
+        content = request.form['content'].strip()
+        if content:
+            msg = Message(
+                conversation_id=conversation_id,
+                sender_id=user_id,
+                content=content
+            )
+            db.session.add(msg)
+            db.session.commit()
+            return redirect(url_for('messages', conversation_id=conversation_id))
+
+    messages_list = Message.query.filter_by(conversation_id=conversation_id).order_by(Message.timestamp.asc()).all()
+    return render_template('messages.html', conversation=convo, messages=messages_list)
+
+@app.route('/start_conversation/<int:ad_id>', methods=['GET', 'POST'])
+@login_required
+def start_conversation(ad_id):
+    ad = Ad.query.get_or_404(ad_id)
+    buyer_id = int(session['user_id'])
+    seller_id = ad.user_id
+
+    # Don't allow user to message self
+    if buyer_id == seller_id:
+        flash("You cannot message yourself.", "warning")
+        return redirect(url_for('ad_detail', ad_id=ad_id))
+
+    # Check if conversation already exists
+    convo = Conversation.query.filter_by(ad_id=ad_id, buyer_id=buyer_id, seller_id=seller_id).first()
+    if not convo:
+        convo = Conversation(ad_id=ad_id, buyer_id=buyer_id, seller_id=seller_id)
+        db.session.add(convo)
+        db.session.commit()
+
+    return redirect(url_for('messages', conversation_id=convo.id))
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

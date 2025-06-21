@@ -73,6 +73,18 @@
       <p><strong>Contact:</strong> {{ ad.contact }}</p>
       <p><strong>Description:</strong></p>
       <p>{{ ad.description }}</p>
+
+      {% if session.get('user_id') %}
+        {% if session['user_id'] != ad.user_id %}
+          <a href="{{ url_for('start_conversation', ad_id=ad.id) }}" class="btn btn-success mt-3">Message Seller</a>
+        {% else %}
+          <p class="mt-3 text-muted"><em>This is your ad.</em></p>
+        {% endif %}
+      {% else %}
+        <p class="mt-3">
+          <a href="{{ url_for('login') }}">Log in</a> to message the seller.
+        </p>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -84,11 +96,8 @@
 
   thumbnails.forEach(thumb => {
     thumb.addEventListener('click', () => {
-      // Remove selected class from all thumbnails
       thumbnails.forEach(t => t.classList.remove('selected'));
-      // Add selected to clicked thumb
       thumb.classList.add('selected');
-      // Change main image src
       mainImage.src = thumb.src;
     });
   });
