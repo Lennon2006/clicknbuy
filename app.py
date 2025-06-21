@@ -147,29 +147,24 @@ def home():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username'].strip()
-        email = request.form['email'].strip()
+        username = request.form['username']
+        email = request.form['email']
         password = request.form['password']
-        confirm = request.form['confirm_password']
 
-        if not all([username, email, password, confirm]):
-            flash("All fields required.", "danger")
-            return redirect(url_for('register'))
-        if password != confirm:
-            flash("Passwords do not match.", "danger")
-            return redirect(url_for('register'))
-        if User.query.filter_by(username=username).first():
-            flash("Username exists.", "danger")
-            return redirect(url_for('register'))
-        if User.query.filter_by(email=email).first():
-            flash("Email already used.", "danger")
-            return redirect(url_for('register'))
+        # Default profile pic path relative to 'static/uploads/'
+        default_profile_pic = 'default-profile.png'
 
-        user = User(username=username, email=email, profile_pic='default-profile.png')
-        user.set_password(password)
-        db.session.add(user)
+        # Create new user with default profile pic
+        new_user = User(
+            username=username,
+            email=email,
+            password_hash=generate_password_hash(password),
+            profile_pic='default-profile.png'
+        )
+
+        db.session.add(new_user)
         db.session.commit()
-        flash("Registration successful. Please log in.", "success")
+        # continue with login or redirect...
         return redirect(url_for('login'))
 
     return render_template('register.html')
