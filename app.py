@@ -1,13 +1,14 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
+from flask import abort, session, flash, redirect, url_for
 import os
 import uuid
 from datetime import datetime
-from flask import request, jsonify
+
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -32,13 +33,14 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     profile_pic = db.Column(db.String(120), nullable=True)
     ads = db.relationship('Ad', backref='owner', lazy=True)
-    # Relationships for messaging
+    is_admin = db.Column(db.Boolean, default=False)
     sent_conversations = db.relationship('Conversation', foreign_keys='Conversation.seller_id', backref='seller', lazy=True)
     received_conversations = db.relationship('Conversation', foreign_keys='Conversation.buyer_id', backref='buyer', lazy=True)
+    activities = db.relationship('ActivityLog', backref='user', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
-    
+
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
@@ -58,7 +60,13 @@ class Image(db.Model):
     filename = db.Column(db.String(100), nullable=False)
     ad_id = db.Column(db.Integer, db.ForeignKey('ad.id'), nullable=False)
 
-# Messaging models
+class ActivityLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    action = db.Column(db.String(200))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    ip_address = db.Column(db.String(100))
+
 class Conversation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     buyer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -100,6 +108,13 @@ def save_profile_pic(file):
         return filename
     return None
 
+def log_activity(user_id, action):
+    ip = request.remote_addr
+    log = ActivityLog(user_id=user_id, action=action, ip_address=ip)
+    db.session.add(log)
+    db.session.commit()
+
+
 # Routes
 
 @app.route('/')
@@ -136,6 +151,8 @@ def register():
     
     return render_template('register.html')
 
+
+#Login route
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -153,6 +170,7 @@ def login():
         if user and user.check_password(password):
             session['user_id'] = user.id
             session['username'] = user.username
+            log_activity(user.id, "Logged in")
             flash("Welcome back!", "success")
             return redirect(url_for('home'))
         else:
@@ -167,6 +185,8 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for('home'))
 
+
+#Edit 
 @app.route('/edit_message/<int:message_id>', methods=['POST'])
 def edit_message(message_id):
     msg = Message.query.get_or_404(message_id)
@@ -185,7 +205,7 @@ def delete_message(message_id):
     db.session.commit()
     return jsonify({'success': True})
 
-
+#Post
 @app.route('/post', methods=['GET', 'POST'])
 @login_required
 def post_ad():
@@ -201,6 +221,7 @@ def post_ad():
         )
         db.session.add(new_ad)
         db.session.commit()
+        log_activity(session['user_id'], "Posted an ad")
 
         for image in request.files.getlist('images'):
             if image and allowed_file(image.filename):
@@ -216,6 +237,33 @@ def post_ad():
 
     return render_template('post.html')
 
+#Activity log in
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user_id = session.get('user_id')
+        if not user_id:
+            flash("Please log in first.", "warning")
+            return redirect(url_for('login'))
+
+        user = User.query.get(user_id)
+        if not user or not user.is_admin:
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/activity_logs')
+@admin_required
+@login_required
+def view_logs():
+    logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(100).all()
+    return render_template('activity_logs.html', logs=logs)
+
+
+
+
+#Profile 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
@@ -410,6 +458,12 @@ def start_conversation(ad_id):
         db.session.commit()
 
     return redirect(url_for('messages', conversation_id=convo.id))
+
+#404 Error
+@app.errorhandler(403)
+def forbidden(error):
+    return render_template("403.html"), 403
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
