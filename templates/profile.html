@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{{ user.username }}'s Profile</title>
+  <title>{{ user.username }}'s Profile - Click N Buy</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <style>
     .profile-pic {
@@ -42,6 +42,13 @@
       margin-bottom: 0.5rem;
       font-style: italic;
     }
+
+    .nav-avatar {
+      width: 32px;
+      height: 32px;
+      object-fit: cover;
+      border-radius: 50%;
+    }
   </style>
 </head>
 <body class="bg-light">
@@ -58,11 +65,12 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('show_ads') }}">View Ads</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('post_ad') }}">Post Ad</a></li>
         <li class="nav-item d-none d-sm-block">
-          {% if user.profile_pic %}
-            <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" alt="Avatar" class="rounded-circle" width="32" height="32">
+          {% if user.profile_pic and user.profile_pic != 'default-profile.png' %}
+            <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" alt="Profile Picture" class="profile-pic" />
           {% else %}
-            <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Avatar" class="rounded-circle" width="32" height="32">
+            <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Default Profile Picture" class="profile-pic" />
           {% endif %}
+
         </li>
         <li class="nav-item"><span class="nav-link">Hi, {{ user.username }}</span></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
@@ -76,10 +84,10 @@
     <div class="col-12 col-md-8 col-lg-6 bg-white p-4 rounded shadow-sm">
       
       <div class="text-center mb-4">
-        {% if user.profile_pic %}
-          <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" alt="Profile Picture" class="profile-pic mb-3" />
+        {% if user.profile_pic == 'default-profile.png' %}
+          <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Default Profile Picture" />
         {% else %}
-          <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Default Profile Picture" class="profile-pic mb-3" />
+          <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" alt="Profile Picture" />
         {% endif %}
         <form method="POST" enctype="multipart/form-data" action="{{ url_for('profile') }}" class="w-100">
           <label for="profile_pic" class="form-label">Update Profile Picture</label>
@@ -146,13 +154,16 @@
           {% for ad in user.ads %}
             <div class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
               <div class="mb-2 mb-md-0">
-                <strong>{{ ad.title }}</strong> — <span class="text-primary fw-semibold">{{ ad.price }}</span><br />
+                <strong>{{ ad.title }}</strong> — <span class="text-primary fw-semibold">N${{ ad.price }}</span><br />
                 <small class="text-muted">{{ ad.category }}</small>
+                {% if ad.is_sold %}
+                  <span class="badge bg-danger ms-2">Sold</span>
+                {% endif %}
               </div>
               <div class="d-flex">
                 <a href="{{ url_for('edit_ad', ad_id=ad.id) }}" class="btn btn-sm btn-outline-primary me-2">Edit</a>
                 <form action="{{ url_for('delete_ad', ad_id=ad.id) }}" method="POST" class="d-inline">
-                  <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                  <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this ad?');">Delete</button>
                 </form>
               </div>
             </div>
