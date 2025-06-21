@@ -1,33 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{{ ad.title }} - Click N Buy</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <style>
-    .main-image {
-      width: 100%;
-      max-height: 400px;
-      object-fit: contain;
-      border-radius: 8px;
-      border: 1px solid #ddd;
-      cursor: zoom-in;
-    }
-    .thumbnail {
-      height: 75px;
-      width: auto;
-      margin: 5px;
-      border-radius: 5px;
-      object-fit: cover;
-      border: 2px solid transparent;
-      cursor: pointer;
-      transition: border-color 0.3s ease;
-    }
-    .thumbnail.selected {
-      border-color: #0d6efd;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <title>{{ ad.title }} - Click N Buy</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        .ad-images img {
+            max-width: 200px;
+            margin: 5px;
+            border-radius: 0.5rem;
+        }
+        .badge-sold {
+            background-color: #dc3545;
+            color: white;
+            padding: 0.35rem 0.65rem;
+            font-size: 1rem;
+            border-radius: 0.375rem;
+            margin-left: 1rem;
+        }
+    </style>
 </head>
 <body class="bg-light">
 
@@ -41,68 +32,91 @@
       <ul class="navbar-nav">
         <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('show_ads') }}">View Ads</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('post_ad') }}">Post Ad</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
+        {% if session.get('user_id') %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
+        {% else %}
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
+        {% endif %}
       </ul>
     </div>
   </div>
 </nav>
 
-<div class="container my-5">
-  <a href="{{ url_for('show_ads') }}" class="btn btn-outline-secondary mb-3">&larr; Back to Ads</a>
+<div class="container my-5 bg-white p-4 rounded shadow-sm">
+    <header>
+        <h1>
+          {{ ad.title }}
+          {% if ad.is_sold %}
+            <span class="badge-sold">Sold Out</span>
+          {% endif %}
+        </h1>
+        <p><strong>Category:</strong> {{ ad.category }}</p>
+        <p><strong>Price:</strong> N${{ ad.price }}</p>
+        <p><strong>Location:</strong> {{ ad.location }}</p>
+        <p><strong>Contact:</strong> {{ ad.contact }}</p>
+        <p><strong>Description:</strong><br>{{ ad.description | e }}</p>
 
-  <div class="row">
-    <div class="col-md-6 mb-4">
-      {% if ad.images %}
-        <img id="mainImage" src="{{ url_for('static', filename='uploads/' ~ ad.images[0].filename) }}" alt="{{ ad.title }}" class="main-image mb-3" />
-        <div class="d-flex flex-wrap">
-          {% for img in ad.images %}
-            <img src="{{ url_for('static', filename='uploads/' ~ img.filename) }}" alt="Thumbnail" class="thumbnail {% if loop.first %}selected{% endif %}" />
-          {% endfor %}
-        </div>
-      {% else %}
-        <img src="{{ url_for('static', filename='images/no-image.png') }}" alt="No Image" class="main-image" />
-      {% endif %}
-    </div>
-
-    <div class="col-md-6">
-      <h2>{{ ad.title }}</h2>
-      <h4 class="text-primary mb-3">{{ ad.price }}</h4>
-      <p><strong>Category:</strong> {{ ad.category }}</p>
-      <p><strong>Contact:</strong> {{ ad.contact }}</p>
-      <p><strong>Description:</strong></p>
-      <p>{{ ad.description }}</p>
-      <p><strong>Location:</strong> {{ ad.location }}</p>
-
-      {% if session.get('user_id') %}
-        {% if session['user_id'] != ad.user_id %}
-          <a href="{{ url_for('start_conversation', ad_id=ad.id) }}" class="btn btn-success mt-3">Message Seller</a>
+        <h3>Seller: {{ ad.owner.username }}</h3>
+        {% if seller_avg_rating %}
+            <p>Seller Rating: {{ seller_avg_rating }} / 5 ⭐</p>
         {% else %}
-          <p class="mt-3 text-muted"><em>This is your ad.</em></p>
+            <p>Seller Rating: No ratings yet</p>
         {% endif %}
-      {% else %}
-        <p class="mt-3">
-          <a href="{{ url_for('login') }}">Log in</a> to message the seller.
-        </p>
-      {% endif %}
-    </div>
-  </div>
+
+        <div class="ad-images">
+            {% for image in ad.images %}
+                <img src="{{ url_for('static', filename='uploads/' ~ image.filename) }}" alt="Ad image">
+            {% endfor %}
+        </div>
+    </header>
+
+    <hr>
+
+    <section>
+        <h2>Reviews</h2>
+        {% if ratings %}
+            <ul>
+                {% for rating in ratings %}
+                    <li>
+                        <strong>{{ rating.reviewer.username }}</strong> rated <strong>{{ rating.stars }}/5</strong> ⭐<br>
+                        {% if rating.comment %}
+                            <em>"{{ rating.comment }}"</em><br>
+                        {% endif %}
+                        <small>{{ rating.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No reviews yet.</p>
+        {% endif %}
+    </section>
+
+    <hr>
+
+    {% if session.get('user_id') and session.get('user_id') != ad.user_id and not ad.is_sold %}
+    <section>
+        <h2>Leave a Review</h2>
+        <form method="POST" action="{{ url_for('ad_detail', ad_id=ad.id) }}">
+            <label for="stars">Rating:</label>
+            <select name="stars" id="stars" required>
+                <option value="" disabled selected>Select rating</option>
+                {% for i in range(1, 6) %}
+                    <option value="{{ i }}">{{ i }}</option>
+                {% endfor %}
+            </select>
+            <br><br>
+            <label for="comment">Comment (optional):</label><br>
+            <textarea name="comment" id="comment" rows="3" class="form-control" maxlength="500"></textarea>
+            <br>
+            <button type="submit" class="btn btn-primary">Submit Review</button>
+        </form>
+    </section>
+    {% elif ad.is_sold %}
+        <p class="text-danger"><strong>This product has been sold and is no longer available.</strong></p>
+    {% endif %}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-  const mainImage = document.getElementById('mainImage');
-  const thumbnails = document.querySelectorAll('.thumbnail');
-
-  thumbnails.forEach(thumb => {
-    thumb.addEventListener('click', () => {
-      thumbnails.forEach(t => t.classList.remove('selected'));
-      thumb.classList.add('selected');
-      mainImage.src = thumb.src;
-    });
-  });
-</script>
-
 </body>
 </html>
