@@ -31,7 +31,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    profile_pic = db.Column(db.String(120), nullable=True)
+    profile_pic = db.Column(db.String(255), nullable=False, default='images/default-profile.png')
     ads = db.relationship('Ad', backref='owner', lazy=True)
     is_admin = db.Column(db.Boolean, default=False)
     sent_conversations = db.relationship('Conversation', foreign_keys='Conversation.seller_id', backref='seller', lazy=True)
@@ -143,6 +143,7 @@ def home():
     latest_ads = Ad.query.order_by(Ad.id.desc()).limit(4).all()
     return render_template('home.html', latest_ads=latest_ads)
 
+#Register
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -164,7 +165,7 @@ def register():
             flash("Email already used.", "danger")
             return redirect(url_for('register'))
 
-        user = User(username=username, email=email)
+        user = User(username=username, email=email, profile_pic='default-profile.png')
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
@@ -172,6 +173,7 @@ def register():
         return redirect(url_for('login'))
 
     return render_template('register.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -223,6 +225,7 @@ def delete_message(message_id):
     db.session.commit()
     return jsonify({'success': True})
 
+#post
 @app.route('/post', methods=['GET', 'POST'])
 @login_required
 def post_ad():
@@ -339,7 +342,7 @@ def edit_profile():
         return redirect(url_for('profile'))
 
     return render_template('edit_profile.html', user=user)
-
+#ads
 @app.route('/ads')
 def show_ads():
     query = request.args.get('q', '').strip().lower()

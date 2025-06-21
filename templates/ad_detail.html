@@ -1,34 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <title>{{ ad.title }} - Click N Buy</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <style>
-        .ad-images img {
-            max-width: 200px;
-            margin: 5px;
-            border-radius: 0.5rem;
-        }
-        .badge-sold {
-            background-color: #dc3545;
-            color: white;
-            padding: 0.35rem 0.65rem;
-            font-size: 1rem;
-            border-radius: 0.375rem;
-            margin-left: 1rem;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>{{ ad.title }} - Click N Buy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    .ad-images img {
+      max-width: 100%;
+      max-height: 200px;
+      margin: 5px;
+      border-radius: 0.5rem;
+      object-fit: cover;
+    }
+    .badge-sold {
+      background-color: #dc3545;
+      color: white;
+      padding: 0.35rem 0.65rem;
+      font-size: 1rem;
+      border-radius: 0.375rem;
+      margin-left: 1rem;
+    }
+    .seller-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .seller-pic {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #198754;
+    }
+    .star-rating {
+      color: #ffc107; /* bootstrap warning/yellow */
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+    /* Navbar offcanvas tweaks */
+    @media (max-width: 991.98px) {
+      .offcanvas-body a.nav-link {
+        padding: 0.75rem 1rem;
+      }
+    }
+  </style>
 </head>
 <body class="bg-light">
 
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
   <div class="container">
     <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+    <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
-    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+
+    <div class="collapse navbar-collapse d-none d-lg-flex justify-content-end" id="navbarNav">
       <ul class="navbar-nav">
         <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('show_ads') }}">View Ads</a></li>
@@ -43,78 +70,122 @@
   </div>
 </nav>
 
-<div class="container my-5 bg-white p-4 rounded shadow-sm">
-    <header>
-        <h1>
-          {{ ad.title }}
+<!-- Offcanvas menu for mobile -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasMenu" aria-labelledby="offcanvasMenuLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="offcanvasMenuLabel">Menu</h5>
+    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    <a href="{{ url_for('home') }}" class="nav-link">Home</a>
+    <a href="{{ url_for('show_ads') }}" class="nav-link">View Ads</a>
+    {% if session.get('user_id') %}
+      <a href="{{ url_for('profile') }}" class="nav-link">Profile</a>
+      <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
+    {% else %}
+      <a href="{{ url_for('login') }}" class="nav-link">Login</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="container my-5">
+  <div class="bg-white p-4 rounded shadow-sm">
+    <div class="row">
+      <div class="col-lg-7">
+        <h2 class="fw-bold">{{ ad.title }}
           {% if ad.is_sold %}
             <span class="badge-sold">Sold Out</span>
           {% endif %}
-        </h1>
+        </h2>
         <p><strong>Category:</strong> {{ ad.category }}</p>
         <p><strong>Price:</strong> N${{ ad.price }}</p>
         <p><strong>Location:</strong> {{ ad.location }}</p>
         <p><strong>Contact:</strong> {{ ad.contact }}</p>
         <p><strong>Description:</strong><br>{{ ad.description | e }}</p>
 
-        <h3>Seller: {{ ad.owner.username }}</h3>
-        {% if seller_avg_rating %}
-            <p>Seller Rating: {{ seller_avg_rating }} / 5 ⭐</p>
-        {% else %}
-            <p>Seller Rating: No ratings yet</p>
-        {% endif %}
-
-        <div class="ad-images">
-            {% for image in ad.images %}
-                <img src="{{ url_for('static', filename='uploads/' ~ image.filename) }}" alt="Ad image">
-            {% endfor %}
+        <div class="mt-4 ad-images d-flex flex-wrap">
+          {% for image in ad.images %}
+            <img src="{{ url_for('static', filename='uploads/' ~ image.filename) }}" alt="Ad image" class="me-2 mb-2 rounded">
+          {% endfor %}
         </div>
-    </header>
+      </div>
 
-    <hr>
+      <div class="col-lg-5 mt-4 mt-lg-0">
+        <div class="seller-info mb-3">
+          {% if ad.owner.profile_pic %}
+            <img src="{{ url_for('static', filename='uploads/' ~ ad.owner.profile_pic) }}" alt="Seller Profile Pic" class="seller-pic" />
+          {% else %}
+            <img src="{{ url_for('static', filename='default_profile.png') }}" alt="Default Profile Pic" class="seller-pic" />
+          {% endif %}
+          <div>
+            <h5 class="mb-0">{{ ad.owner.username }}</h5>
+            <div class="star-rating">
+              {% for i in range(1, 6) %}
+                {% if i <= (seller_avg_rating|round(0, 'floor') if seller_avg_rating else 0) %}
+                  &#9733; <!-- filled star -->
+                {% else %}
+                  &#9734; <!-- empty star -->
+                {% endif %}
+              {% endfor %}
+              {% if not seller_avg_rating %}
+                <small class="text-muted">No ratings yet</small>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        {% if session.get('user_id') and session.get('user_id') != ad.user_id and not ad.is_sold %}
+          <a href="{{ url_for('start_conversation', ad_id=ad.id) }}" class="btn btn-success w-100 mt-3">💬 Message Seller</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <hr class="my-4">
 
     <section>
-        <h2>Reviews</h2>
-        {% if ratings %}
-            <ul>
-                {% for rating in ratings %}
-                    <li>
-                        <strong>{{ rating.reviewer.username }}</strong> rated <strong>{{ rating.stars }}/5</strong> ⭐<br>
-                        {% if rating.comment %}
-                            <em>"{{ rating.comment }}"</em><br>
-                        {% endif %}
-                        <small>{{ rating.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p>No reviews yet.</p>
-        {% endif %}
+      <h4 class="mb-3">Reviews</h4>
+      {% if ratings %}
+        <ul class="list-group">
+          {% for rating in ratings %}
+            <li class="list-group-item">
+              <strong>{{ rating.reviewer.username }}</strong> rated it <strong>{{ rating.stars }}/5</strong> ⭐
+              {% if rating.comment %}
+                <div class="mt-2 text-muted">"{{ rating.comment }}"</div>
+              {% endif %}
+              <small class="d-block mt-1 text-secondary">{{ rating.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No reviews yet.</p>
+      {% endif %}
     </section>
-
-    <hr>
 
     {% if session.get('user_id') and session.get('user_id') != ad.user_id and not ad.is_sold %}
-    <section>
-        <h2>Leave a Review</h2>
+      <hr class="my-4">
+      <section>
+        <h4>Leave a Review</h4>
         <form method="POST" action="{{ url_for('ad_detail', ad_id=ad.id) }}">
-            <label for="stars">Rating:</label>
-            <select name="stars" id="stars" required>
-                <option value="" disabled selected>Select rating</option>
-                {% for i in range(1, 6) %}
-                    <option value="{{ i }}">{{ i }}</option>
-                {% endfor %}
+          <div class="mb-3">
+            <label for="stars" class="form-label">Rating</label>
+            <select name="stars" id="stars" class="form-select" required>
+              <option value="" disabled selected>Select rating</option>
+              {% for i in range(1, 6) %}
+                <option value="{{ i }}">{{ i }}</option>
+              {% endfor %}
             </select>
-            <br><br>
-            <label for="comment">Comment (optional):</label><br>
+          </div>
+          <div class="mb-3">
+            <label for="comment" class="form-label">Comment (optional)</label>
             <textarea name="comment" id="comment" rows="3" class="form-control" maxlength="500"></textarea>
-            <br>
-            <button type="submit" class="btn btn-primary">Submit Review</button>
+          </div>
+          <button type="submit" class="btn btn-primary">Submit Review</button>
         </form>
-    </section>
+      </section>
     {% elif ad.is_sold %}
-        <p class="text-danger"><strong>This product has been sold and is no longer available.</strong></p>
+      <div class="alert alert-danger mt-4"><strong>This product has been sold and is no longer available.</strong></div>
     {% endif %}
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
