@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort
+from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -6,29 +7,123 @@ from functools import wraps
 import os
 import uuid
 from datetime import datetime
+from main import db, User, Ad
 
-from models import db, User, Ad, Image, Rating, ActivityLog, Conversation, Message
+
+
+
+print("Total users:", User.query.count())
+
+
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# --- Configuration ---
+# Config
 UPLOAD_FOLDER = os.path.join(basedir, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'ads.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.secret_key = os.environ.get('SECRET_KEY') or 'replace_with_a_strong_random_secret_key'
 
-# Initialize DB with the Flask app
-db.init_app(app)
+db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
+# Models
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+    profile_pic = db.Column(db.String(255), nullable=False, default='default-profile.png')
+    ads = db.relationship('Ad', backref='owner', lazy=True)
+    is_admin = db.Column(db.Boolean, default=False)
+    sent_conversations = db.relationship('Conversation', foreign_keys='Conversation.seller_id', backref='seller', lazy=True)
+    received_conversations = db.relationship('Conversation', foreign_keys='Conversation.buyer_id', backref='buyer', lazy=True)
+    activities = db.relationship('ActivityLog', backref='user', lazy=True)
+    ratings_given = db.relationship('Rating', foreign_keys='Rating.reviewer_id', backref='reviewer', lazy=True)
+    ratings_received = db.relationship('Rating', foreign_keys='Rating.reviewed_id', backref='reviewed', lazy=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # <-- Add this line
+    
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def average_rating(self):
+        if not self.ratings_received or len(self.ratings_received) == 0:
+            return None
+        return round(sum(r.stars for r in self.ratings_received) / len(self.ratings_received), 2)
+
+from datetime import datetime
+
+class Ad(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100))
+    description = db.Column(db.Text)
+    price = db.Column(db.String(50))
+    category = db.Column(db.String(50))
+    contact = db.Column(db.String(100))
+    location = db.Column(db.String(100))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    is_sold = db.Column(db.Boolean, default=False)  # Mark as sold
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # <-- Add this line
+    images = db.relationship('Image', backref='ad', lazy=True, cascade="all, delete-orphan")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # <-- Add this line
+
+
+class Image(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(100), nullable=False)
+    ad_id = db.Column(db.Integer, db.ForeignKey('ad.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # <-- Add this line
+
+class Rating(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    reviewer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    reviewed_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    ad_id = db.Column(db.Integer, db.ForeignKey('ad.id'), nullable=False)
+    stars = db.Column(db.Integer, nullable=False)
+    comment = db.Column(db.Text, nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # <-- Add this line
+    
+
+class ActivityLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    action = db.Column(db.String(200))
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    ip_address = db.Column(db.String(100))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # <-- Add this line
+
+
+class Conversation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    buyer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    seller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    ad_id = db.Column(db.Integer, db.ForeignKey('ad.id'), nullable=False)
+    messages = db.relationship('Message', backref='conversation', lazy=True, cascade='all, delete-orphan')
+    ad = db.relationship('Ad')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # <-- Add this line
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    is_read = db.Column(db.Boolean, default=False)
+    sender = db.relationship('User')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # <-- Add this line
+    
 
 with app.app_context():
     db.create_all()
-    print("Total users:", User.query.count())
 
 # Helpers
 def allowed_file(filename):
@@ -77,11 +172,45 @@ def home():
     latest_ads = Ad.query.order_by(Ad.id.desc()).limit(4).all()
     return render_template('home.html', latest_ads=latest_ads)
 
+#ADMIN DASHBOARD
+@app.route('/admin/dashboard')
+@admin_required
+@login_required
+def admin_dashboard():
+    total_users = User.query.count()
+    total_ads = Ad.query.count()
+    total_reviews = Rating.query.count()
+    total_messages = Message.query.count()
+    
+    # Active users last 24h - users who logged in or did any activity
+    from datetime import datetime, timedelta
+    since = datetime.utcnow() - timedelta(days=1)
+    active_users = db.session.query(ActivityLog.user_id).filter(ActivityLog.timestamp >= since).distinct().count()
+
+    # Example: Ads posted in last 7 days
+    since_week = datetime.utcnow() - timedelta(days=7)
+    recent_ads = Ad.query.filter(Ad.id.in_(
+        db.session.query(Ad.id).filter(Ad.id > 0)  # modify with timestamp field if available
+    )).count()
+
+    # You can add more metrics here...
+
+    return render_template('admin_dashboard.html',
+        total_users=total_users,
+        total_ads=total_ads,
+        total_reviews=total_reviews,
+        total_messages=total_messages,
+        active_users=active_users,
+        recent_ads=recent_ads,
+    )
+
+
+#Register
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username'].strip()
-        email = request.form['email'].strip()
+        username = request.form['username']
+        email = request.form['email']
         password = request.form['password']
 
         if User.query.filter((User.username == username) | (User.email == email)).first():
@@ -105,8 +234,8 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        identifier = request.form.get('username_or_email', '').strip()
-        password = request.form.get('password', '')
+        identifier = request.form.get('username_or_email')
+        password = request.form.get('password')
 
         if not identifier or not password:
             flash("Both fields are required.", "warning")
@@ -134,43 +263,96 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for('home'))
 
+@app.route('/edit_message/<int:message_id>', methods=['POST'])
+def edit_message(message_id):
+    msg = Message.query.get_or_404(message_id)
+    if msg.sender_id != session.get('user_id'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    msg.content = request.json['content']
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/delete_message/<int:message_id>', methods=['POST'])
+def delete_message(message_id):
+    msg = Message.query.get_or_404(message_id)
+    if msg.sender_id != session.get('user_id'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    db.session.delete(msg)
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/post', methods=['GET', 'POST'])
+@login_required
+def post_ad():
+    if request.method == 'POST':
+        new_ad = Ad(
+            title=request.form['title'],
+            description=request.form['description'],
+            price=request.form['price'],
+            category=request.form['category'],
+            contact=request.form['contact'],
+            location=request.form['location'],
+            user_id=int(session['user_id'])
+        )
+        db.session.add(new_ad)
+        db.session.commit()
+        log_activity(session['user_id'], "Posted an ad")
+
+        for image in request.files.getlist('images'):
+            if image and allowed_file(image.filename):
+                filename = secure_filename(image.filename)
+                unique_name = f"user_{session['user_id']}_{uuid.uuid4().hex}_{filename}"
+                path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
+                image.save(path)
+                db.session.add(Image(filename=unique_name, ad_id=new_ad.id))
+
+        db.session.commit()
+        flash("Ad posted successfully.", "success")
+        return redirect(url_for('show_ads'))
+
+    return render_template('post.html')
+
+@app.route('/activity_logs')
+@admin_required
+@login_required
+def view_logs():
+    logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(100).all()
+    return render_template('activity_logs.html', logs=logs)
+
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    user = User.query.get_or_404(int(session['user_id']))
+    user = User.query.get(int(session['user_id']))
 
     if request.method == 'POST':
         file = request.files.get('profile_pic')
         if file and allowed_file(file.filename):
-            # Delete old pic if not default
             if user.profile_pic and user.profile_pic != 'default-profile.png':
                 old_path = os.path.join(app.config['UPLOAD_FOLDER'], user.profile_pic)
                 if os.path.exists(old_path):
                     os.remove(old_path)
             filename = save_profile_pic(file)
-            if filename:
-                user.profile_pic = filename
-                db.session.commit()
-                flash("Profile picture updated.", "success")
-            else:
-                flash("Failed to save profile picture.", "danger")
+            user.profile_pic = filename
+            db.session.commit()
+            flash("Profile picture updated.", "success")
         else:
             flash("Invalid file or no file selected.", "warning")
         return redirect(url_for('profile'))
 
     user_ratings = Rating.query.filter_by(reviewed_id=user.id).order_by(Rating.timestamp.desc()).all()
+
     return render_template('profile.html', user=user, user_ratings=user_ratings)
 
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
-    user = User.query.get_or_404(int(session['user_id']))
+    user = User.query.get(int(session['user_id']))
 
     if request.method == 'POST':
-        new_username = request.form.get('username', '').strip()
-        new_email = request.form.get('email', '').strip()
-        new_password = request.form.get('password', '')
-        confirm_password = request.form.get('confirm_password', '')
+        new_username = request.form.get('username').strip()
+        new_email = request.form.get('email').strip()
+        new_password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
 
         if not new_username or not new_email:
             flash("Username and email are required.", "danger")
@@ -220,37 +402,8 @@ def show_ads():
 
     return render_template('ads.html', ads=ads.all(), categories=categories)
 
-@app.route('/post', methods=['GET', 'POST'])
-@login_required
-def post_ad():
-    if request.method == 'POST':
-        new_ad = Ad(
-            title=request.form['title'],
-            description=request.form['description'],
-            price=request.form['price'],
-            category=request.form['category'],
-            contact=request.form['contact'],
-            location=request.form['location'],
-            user_id=int(session['user_id'])
-        )
-        db.session.add(new_ad)
-        db.session.commit()
-        log_activity(session['user_id'], "Posted an ad")
 
-        for image in request.files.getlist('images'):
-            if image and allowed_file(image.filename):
-                filename = secure_filename(image.filename)
-                unique_name = f"user_{session['user_id']}_{uuid.uuid4().hex}_{filename}"
-                path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
-                image.save(path)
-                db.session.add(Image(filename=unique_name, ad_id=new_ad.id))
-
-        db.session.commit()
-        flash("Ad posted successfully.", "success")
-        return redirect(url_for('show_ads'))
-
-    return render_template('post.html')
-
+#('/edit/<int:ad_id>'
 @app.route('/edit/<int:ad_id>', methods=['GET', 'POST'])
 @login_required
 def edit_ad(ad_id):
@@ -291,6 +444,9 @@ def edit_ad(ad_id):
 
     return render_template('edit.html', ad=ad)
 
+
+
+#'/delete/<int:ad_id>'
 @app.route('/delete/<int:ad_id>', methods=['POST'])
 @login_required
 def delete_ad(ad_id):
@@ -310,6 +466,8 @@ def delete_ad(ad_id):
     flash("Ad deleted.", "info")
     return redirect(url_for('show_ads'))
 
+
+#'/ads/<int:ad_id>'
 @app.route('/ads/<int:ad_id>', methods=['GET', 'POST'])
 def ad_detail(ad_id):
     ad = Ad.query.get_or_404(ad_id)
@@ -355,6 +513,9 @@ def ad_detail(ad_id):
 
     return render_template('ad_detail.html', ad=ad, seller_avg_rating=seller_avg_rating, ratings=ratings)
 
+
+
+#'/messages/<int:conversation_id>
 @app.route('/messages/<int:conversation_id>', methods=['GET', 'POST'])
 @login_required
 def messages(conversation_id):
@@ -390,6 +551,9 @@ def messages(conversation_id):
     messages_list = Message.query.filter_by(conversation_id=conversation_id).order_by(Message.timestamp.asc()).all()
     return render_template('messages.html', conversation=convo, messages=messages_list)
 
+
+
+#'/start_conversation/<int:ad_id>'
 @app.route('/start_conversation/<int:ad_id>', methods=['GET', 'POST'])
 @login_required
 def start_conversation(ad_id):
@@ -409,25 +573,21 @@ def start_conversation(ad_id):
 
     return redirect(url_for('messages', conversation_id=convo.id))
 
+
+#ERROR 
 @app.errorhandler(403)
 def forbidden(error):
     return render_template("403.html"), 403
 
-# Public profile route by username
-@app.route('/user/<username>')
+
+#PROFILE/USERNAME
+@app.route('/profile/<username>')
 def profile_public(username):
-    user = User.query.filter_by(username=username).first()
-    if not user:
-        flash("User not found.", "error")
-        return redirect(url_for('home'))
+    # show public profile of user with this username
+    user = User.query.filter_by(username=username).first_or_404()
+    return render_template('profile_public.html', user=user)
 
-    # Get ads posted by user to show on public profile
-    ads = Ad.query.filter_by(user_id=user.id).order_by(Ad.id.desc()).all()
-
-    # Get user ratings
-    user_ratings = Rating.query.filter_by(reviewed_id=user.id).order_by(Rating.timestamp.desc()).all()
-    return render_template('profile_public.html', user=user, ads=ads, ratings=user_ratings)
-
+#INBOX
 @app.route('/inbox')
 @login_required
 def inbox():
@@ -447,27 +607,6 @@ def inbox():
 
     return render_template('inbox.html', conversations=conversations, unread_counts=unread_counts)
 
-# API for editing messages
-@app.route('/edit_message/<int:message_id>', methods=['POST'])
-@login_required
-def edit_message(message_id):
-    msg = Message.query.get_or_404(message_id)
-    if msg.sender_id != session.get('user_id'):
-        return jsonify({'error': 'Unauthorized'}), 403
-    msg.content = request.json.get('content', '')
-    db.session.commit()
-    return jsonify({'success': True})
-
-# API for deleting messages
-@app.route('/delete_message/<int:message_id>', methods=['POST'])
-@login_required
-def delete_message(message_id):
-    msg = Message.query.get_or_404(message_id)
-    if msg.sender_id != session.get('user_id'):
-        return jsonify({'error': 'Unauthorized'}), 403
-    db.session.delete(msg)
-    db.session.commit()
-    return jsonify({'success': True})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
