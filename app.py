@@ -1,14 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
-from flask import abort, session, flash, redirect, url_for
 import os
 import uuid
 from datetime import datetime
-
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -31,14 +29,12 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    profile_pic = db.Column(db.String(255), nullable=False, default='images/default-profile.png')
+    profile_pic = db.Column(db.String(255), nullable=False, default='default-profile.png')
     ads = db.relationship('Ad', backref='owner', lazy=True)
     is_admin = db.Column(db.Boolean, default=False)
     sent_conversations = db.relationship('Conversation', foreign_keys='Conversation.seller_id', backref='seller', lazy=True)
     received_conversations = db.relationship('Conversation', foreign_keys='Conversation.buyer_id', backref='buyer', lazy=True)
     activities = db.relationship('ActivityLog', backref='user', lazy=True)
-
-    # Ratings given and received:
     ratings_given = db.relationship('Rating', foreign_keys='Rating.reviewer_id', backref='reviewer', lazy=True)
     ratings_received = db.relationship('Rating', foreign_keys='Rating.reviewed_id', backref='reviewed', lazy=True)
 
@@ -55,7 +51,6 @@ class User(db.Model):
 
 class Ad(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100))
     description = db.Column(db.Text)
     price = db.Column(db.String(50))
@@ -63,9 +58,8 @@ class Ad(db.Model):
     contact = db.Column(db.String(100))
     location = db.Column(db.String(100))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    is_sold = db.Column(db.Boolean, default=False)  # New field to mark as sold
+    is_sold = db.Column(db.Boolean, default=False)  # Mark as sold
     images = db.relationship('Image', backref='ad', lazy=True, cascade="all, delete-orphan")
-    is_sold = db.Column(db.Boolean, default=False) 
 
 class Image(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -121,6 +115,19 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user_id = session.get('user_id')
+        if not user_id:
+            flash("Please log in first.", "warning")
+            return redirect(url_for('login'))
+        user = User.query.get(user_id)
+        if not user or not user.is_admin:
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
 def save_profile_pic(file):
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
@@ -137,13 +144,11 @@ def log_activity(user_id, action):
     db.session.commit()
 
 # Routes
-
 @app.route('/')
 def home():
     latest_ads = Ad.query.order_by(Ad.id.desc()).limit(4).all()
     return render_template('home.html', latest_ads=latest_ads)
 
-#Register
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -151,10 +156,10 @@ def register():
         email = request.form['email']
         password = request.form['password']
 
-        # Default profile pic path relative to 'static/uploads/'
-        default_profile_pic = 'default-profile.png'
+        if User.query.filter((User.username == username) | (User.email == email)).first():
+            flash("Username or email already taken.", "danger")
+            return redirect(url_for('register'))
 
-        # Create new user with default profile pic
         new_user = User(
             username=username,
             email=email,
@@ -164,11 +169,10 @@ def register():
 
         db.session.add(new_user)
         db.session.commit()
-        # continue with login or redirect...
+        flash("Registration successful. Please login.", "success")
         return redirect(url_for('login'))
 
     return render_template('register.html')
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -205,7 +209,7 @@ def logout():
 @app.route('/edit_message/<int:message_id>', methods=['POST'])
 def edit_message(message_id):
     msg = Message.query.get_or_404(message_id)
-    if msg.sender_id != session['user_id']:
+    if msg.sender_id != session.get('user_id'):
         return jsonify({'error': 'Unauthorized'}), 403
     msg.content = request.json['content']
     db.session.commit()
@@ -214,13 +218,12 @@ def edit_message(message_id):
 @app.route('/delete_message/<int:message_id>', methods=['POST'])
 def delete_message(message_id):
     msg = Message.query.get_or_404(message_id)
-    if msg.sender_id != session['user_id']:
+    if msg.sender_id != session.get('user_id'):
         return jsonify({'error': 'Unauthorized'}), 403
     db.session.delete(msg)
     db.session.commit()
     return jsonify({'success': True})
 
-#post
 @app.route('/post', methods=['GET', 'POST'])
 @login_required
 def post_ad():
@@ -252,20 +255,6 @@ def post_ad():
 
     return render_template('post.html')
 
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        user_id = session.get('user_id')
-        if not user_id:
-            flash("Please log in first.", "warning")
-            return redirect(url_for('login'))
-
-        user = User.query.get(user_id)
-        if not user or not user.is_admin:
-            abort(403)
-        return f(*args, **kwargs)
-    return decorated_function
-
 @app.route('/activity_logs')
 @admin_required
 @login_required
@@ -273,7 +262,6 @@ def view_logs():
     logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(100).all()
     return render_template('activity_logs.html', logs=logs)
 
-#profile
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
@@ -282,7 +270,7 @@ def profile():
     if request.method == 'POST':
         file = request.files.get('profile_pic')
         if file and allowed_file(file.filename):
-            if user.profile_pic:
+            if user.profile_pic and user.profile_pic != 'default-profile.png':
                 old_path = os.path.join(app.config['UPLOAD_FOLDER'], user.profile_pic)
                 if os.path.exists(old_path):
                     os.remove(old_path)
@@ -294,7 +282,6 @@ def profile():
             flash("Invalid file or no file selected.", "warning")
         return redirect(url_for('profile'))
 
-    # Fetch all ratings for this user (as the reviewed user)
     user_ratings = Rating.query.filter_by(reviewed_id=user.id).order_by(Rating.timestamp.desc()).all()
 
     return render_template('profile.html', user=user, user_ratings=user_ratings)
@@ -337,7 +324,7 @@ def edit_profile():
         return redirect(url_for('profile'))
 
     return render_template('edit_profile.html', user=user)
-#ads
+
 @app.route('/ads')
 def show_ads():
     query = request.args.get('q', '').strip().lower()
@@ -422,11 +409,9 @@ def ad_detail(ad_id):
     ad = Ad.query.get_or_404(ad_id)
     user_id = session.get('user_id')
 
-    # Calculate average rating for this ad's seller
     seller = User.query.get(ad.user_id)
     seller_avg_rating = seller.average_rating() if seller else None
 
-    # Fetch existing ratings for this ad
     ratings = Rating.query.filter_by(ad_id=ad.id).order_by(Rating.timestamp.desc()).all()
 
     if request.method == 'POST':
@@ -437,12 +422,10 @@ def ad_detail(ad_id):
         stars = int(request.form.get('stars', 0))
         comment = request.form.get('comment', '').strip()
 
-        # Check that user is not reviewing their own ad
         if user_id == ad.user_id:
             flash("You cannot review your own ad.", "danger")
             return redirect(url_for('ad_detail', ad_id=ad_id))
 
-        # Check if user already reviewed this ad
         existing_rating = Rating.query.filter_by(ad_id=ad.id, reviewer_id=user_id).first()
         if existing_rating:
             flash("You have already reviewed this ad.", "warning")
@@ -501,7 +484,6 @@ def messages(conversation_id):
     messages_list = Message.query.filter_by(conversation_id=conversation_id).order_by(Message.timestamp.asc()).all()
     return render_template('messages.html', conversation=convo, messages=messages_list)
 
-#start convo
 @app.route('/start_conversation/<int:ad_id>', methods=['GET', 'POST'])
 @login_required
 def start_conversation(ad_id):
@@ -520,10 +502,17 @@ def start_conversation(ad_id):
         db.session.commit()
 
     return redirect(url_for('messages', conversation_id=convo.id))
-#error
+
 @app.errorhandler(403)
 def forbidden(error):
     return render_template("403.html"), 403
+
+@app.route('/profile/<username>')
+def profile_public(username):
+    # show public profile of user with this username
+    user = User.query.filter_by(username=username).first_or_404()
+    return render_template('profile_public.html', user=user)
+
 
 @app.route('/inbox')
 @login_required
