@@ -11,13 +11,16 @@ class User(db.Model):
     profile_pic = db.Column(db.String(255), nullable=False, default='default-profile.png')
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    is_verified = db.Column(db.Boolean, default=False)
     ads = db.relationship('Ad', backref='owner', lazy=True)
     sent_conversations = db.relationship('Conversation', foreign_keys='Conversation.seller_id', backref='seller', lazy=True)
     received_conversations = db.relationship('Conversation', foreign_keys='Conversation.buyer_id', backref='buyer', lazy=True)
     activities = db.relationship('ActivityLog', backref='user', lazy=True)
     ratings_given = db.relationship('Rating', foreign_keys='Rating.reviewer_id', backref='reviewer', lazy=True)
     ratings_received = db.relationship('Rating', foreign_keys='Rating.reviewed_id', backref='reviewed', lazy=True)
+    
+    
+
 
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
@@ -32,6 +35,8 @@ class User(db.Model):
             return None
         return round(sum(r.stars for r in self.ratings_received) / len(self.ratings_received), 2)
 
+from datetime import datetime
+
 class Ad(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100))
@@ -43,6 +48,13 @@ class Ad(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     is_sold = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # Add to your Ad model:
+    is_paid = db.Column(db.Boolean, default=False)
+
+
+    # Feature Your Ad
+    is_featured = db.Column(db.Boolean, default=False)
+    feature_expiry = db.Column(db.DateTime, nullable=True)
 
     images = db.relationship('Image', backref='ad', lazy=True, cascade="all, delete-orphan")
 

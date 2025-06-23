@@ -5,9 +5,12 @@ from werkzeug.utils import secure_filename
 from functools import wraps
 import os
 import uuid
-from datetime import datetime
-
+from datetime import datetime, timedelta
+from threading import Thread
+import time
 from models import db, User, Ad, Image, Rating, ActivityLog, Conversation, Message
+from alembic import op
+import sqlalchemy as sa
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -50,11 +53,20 @@ def admin_required(f):
         if not user_id:
             flash("Please log in first.", "warning")
             return redirect(url_for('login'))
+
         user = User.query.get(user_id)
-        if not user or not user.is_admin:
-            abort(403)
+        if not user:
+            flash("User not found.", "danger")
+            return redirect(url_for('login'))
+
+        print(f"DEBUG: Logged in as {user.username}, admin status: {user.is_admin}")  # Debug
+
+        if not user.is_admin:
+            return render_template("403.html"), 403
+
         return f(*args, **kwargs)
     return decorated_function
+
 
 def save_profile_pic(file):
     if file and allowed_file(file.filename):
@@ -70,6 +82,24 @@ def log_activity(user_id, action):
     log = ActivityLog(user_id=user_id, action=action, ip_address=ip)
     db.session.add(log)
     db.session.commit()
+
+def unfeature_expired_ads():
+    while True:
+        with app.app_context():
+            now = datetime.utcnow()
+            expired_ads = Ad.query.filter(Ad.is_featured == True, Ad.feature_expiry < now).all()
+            for ad in expired_ads:
+                ad.is_featured = False
+            if expired_ads:
+                db.session.commit()
+        time.sleep(3600)  # check every hour
+
+def upgrade():
+    op.add_column('user', sa.Column('is_verified', sa.Boolean(), nullable=True, server_default=sa.false()))
+    op.alter_column('user', 'is_verified', nullable=False, server_default=None)
+
+def downgrade():
+    op.drop_column('user', 'is_verified')
 
 # Routes
 @app.route('/')
@@ -319,6 +349,7 @@ def ad_detail(ad_id):
     seller_avg_rating = seller.average_rating() if seller else None
 
     ratings = Rating.query.filter_by(ad_id=ad.id).order_by(Rating.timestamp.desc()).all()
+    ads = Ad.query.order_by(Ad.is_featured.desc(), Ad.created_at.desc()).all()
 
     if request.method == 'POST':
         if not user_id:
@@ -469,6 +500,72 @@ def delete_message(message_id):
     db.session.commit()
     return jsonify({'success': True})
 
+# Payment features
+@app.route('/feature_ad/<int:ad_id>', methods=['POST'])
+@login_required
+def feature_ad(ad_id):
+    ad = Ad.query.get_or_404(ad_id)
+
+    if ad.user_id != session['user_id']:
+        abort(403)
+
+    # Simulated payment for now (manual confirmation comes later)
+    ad.is_featured = True
+    ad.feature_expiry = datetime.utcnow() + timedelta(days=7)
+    db.session.commit()
+
+    flash("Your ad is now featured for 7 days!", "success")
+    return redirect(url_for('ad_detail', ad_id=ad.id))
+
+@app.route('/admin/feature-requests')
+@admin_required
+def admin_feature_requests():
+    pending_ads = Ad.query.filter_by(is_featured=True).order_by(Ad.feature_expiry.desc()).all()
+    return render_template('admin_feature_requests.html', ads=pending_ads)
+
+@app.route('/admin/confirm-payment/<int:ad_id>', methods=['POST'])
+@admin_required
+def confirm_feature_payment(ad_id):
+    ad = Ad.query.get_or_404(ad_id)
+    ad.is_paid = True
+    db.session.commit()
+    flash(f"Payment confirmed for ad '{ad.title}'", "success")
+    return redirect(url_for('admin_feature_requests'))
+
+@app.route('/admin/users')
+@admin_required
+def admin_users():
+    users = User.query.order_by(User.id.desc()).all()
+    return render_template('admin_users.html', users=users)
+
+@app.route('/admin/delete-user/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    flash(f"Deleted user {user.username}", "danger")
+    return redirect(url_for('admin_users'))
+
+@app.route('/admin/verify-user/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_verify_user(user_id):
+    user = User.query.get_or_404(user_id)
+    user.is_verified = True
+    db.session.commit()
+    flash(f"Verified {user.username}", "success")
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    return render_template('admin_dashboard.html')
+
+
+
+
 if __name__ == '__main__':
+    Thread(target=unfeature_expired_ads, daemon=True).start()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
