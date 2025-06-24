@@ -261,7 +261,7 @@ def show_ads():
         ads = ads.filter_by(category=selected_category)
 
     # Show featured ads first, then order all by newest
-    ads = ads.order_by(Ad.is_featured.desc(), Ad.id.desc())
+    ads = ads.order_by(Ad.is_featured.desc(), Ad.created_at.desc())
 
     # Get distinct categories for dropdown
     all_categories = db.session.query(Ad.category).distinct().all()
@@ -514,6 +514,9 @@ def inbox():
 
     return render_template('inbox.html', conversations=conversations, unread_counts=unread_counts)
 
+
+
+
 # API for editing messages
 @app.route('/edit_message/<int:message_id>', methods=['POST'])
 @login_required
@@ -537,21 +540,23 @@ def delete_message(message_id):
     return jsonify({'success': True})
 
 # Payment features
+#Feature AD
 @app.route('/feature_ad/<int:ad_id>', methods=['POST'])
 @login_required
 def feature_ad(ad_id):
     ad = Ad.query.get_or_404(ad_id)
 
-    if ad.user_id != session['user_id']:
+    # Only admin or Lennon can feature ads — optional
+    if session.get('user_id') != 1:  # If Lennon is user_id 1
         abort(403)
 
-    # Simulated payment for now (manual confirmation comes later)
     ad.is_featured = True
-    ad.feature_expiry = datetime.utcnow() + timedelta(days=7)
+    ad.feature_expiry = datetime.utcnow() + timedelta(days=7)  # optional expiry logic
     db.session.commit()
 
-    flash("Your ad is now featured for 7 days!", "success")
-    return redirect(url_for('ad_detail', ad_id=ad.id))
+    flash("Ad has been featured!", "success")
+    return redirect(url_for('show_ads'))
+
 
 @app.route('/admin/feature-requests')
 @admin_required
