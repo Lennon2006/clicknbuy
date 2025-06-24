@@ -60,9 +60,9 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('post_ad') }}">Post Ad</a></li>
         <li class="nav-item d-none d-sm-block">
           {% if user.profile_pic %}
-            <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" alt="Avatar" class="rounded-circle" width="32" height="32">
+            <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" alt="Avatar" class="rounded-circle" width="32" height="32" />
           {% else %}
-            <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Avatar" class="rounded-circle" width="32" height="32">
+            <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Avatar" class="rounded-circle" width="32" height="32" />
           {% endif %}
         </li>
         <li class="nav-item">
@@ -84,11 +84,7 @@
     <div class="col-12 col-md-8 col-lg-6 bg-white p-4 rounded shadow-sm">
 
       <div class="text-center mb-4">
-        {% if user.profile_pic %}
-          <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" alt="Profile Picture" class="profile-pic mb-3" />
-        {% else %}
-          <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Default Profile Picture" class="profile-pic mb-3" />
-        {% endif %}
+        <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) if user.profile_pic else url_for('static', filename='images/default-profile.png') }}" alt="Profile Picture" class="profile-pic mb-3" />
         <form method="POST" enctype="multipart/form-data" action="{{ url_for('profile') }}" class="w-100">
           <label for="profile_pic" class="form-label">Update Profile Picture</label>
           <input class="form-control form-control-sm" type="file" id="profile_pic" name="profile_pic" accept="image/*" required />
@@ -110,9 +106,8 @@
 
       <!-- User Rating Summary -->
       <div class="rating-summary text-center mb-4">
-        {% set ratings = user_ratings %}
-        {% if ratings %}
-          {% set avg_stars = (ratings | map(attribute='stars') | sum / (ratings | length)) | round(1) %}
+        {% if user_ratings %}
+          {% set avg_stars = (user_ratings | map(attribute='stars') | sum / (user_ratings | length)) | round(1) %}
           <strong>Average Rating:</strong>
           {% for i in range(1, 6) %}
             {% if i <= avg_stars %}
@@ -124,7 +119,7 @@
             {% endif %}
           {% endfor %}
           <br />
-          <small>{{ ratings|length }} review{{ ratings|length > 1 and 's' or '' }}</small>
+          <small>{{ user_ratings|length }} review{{ user_ratings|length > 1 and 's' or '' }}</small>
         {% else %}
           <p>No ratings yet.</p>
         {% endif %}
@@ -132,8 +127,8 @@
 
       <!-- Reviews -->
       <h4 class="mb-3">User Reviews</h4>
-      {% if ratings %}
-        {% for rating in ratings %}
+      {% if user_ratings %}
+        {% for rating in user_ratings %}
           <div class="review-comment">
             <strong>{{ rating.reviewer.username }}</strong> -
             {% for i in range(1, 6) %}

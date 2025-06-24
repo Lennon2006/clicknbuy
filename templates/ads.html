@@ -27,6 +27,19 @@
     .card-position-relative {
       position: relative;
     }
+    /* Featured ad styling */
+    .card.featured {
+      border: 2px solid #ffc107; /* Bootstrap warning color */
+      background-color: #fff9e6; /* light yellow */
+      box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+    }
+    .badge-featured {
+      background-color: #ffc107;
+      color: #212529;
+      font-weight: 600;
+      margin-left: 0.5rem;
+      font-size: 0.875rem;
+    }
   </style>
 </head>
 <body class="bg-light">
@@ -83,7 +96,7 @@
     <div class="row g-4">
       {% for ad in ads %}
         <div class="col-sm-6 col-md-4 col-lg-3">
-          <div class="card h-100 card-position-relative">
+          <div class="card h-100 card-position-relative {% if ad.is_featured %}featured{% endif %}">
             {% if ad.images %}
               <img src="{{ url_for('static', filename='uploads/' ~ ad.images[0].filename) }}" class="ad-image-preview" alt="Ad image">
             {% else %}
@@ -93,7 +106,12 @@
               <span class="badge-sold">Sold Out</span>
             {% endif %}
             <div class="card-body d-flex flex-column">
-              <h5 class="card-title">{{ ad.title }}</h5>
+              <h5 class="card-title">
+                {{ ad.title }}
+                {% if ad.is_featured %}
+                  <span class="badge badge-featured">🌟 Featured</span>
+                {% endif %}
+              </h5>
               <p class="card-text text-muted">{{ ad.category }}</p>
               <p class="fw-bold text-primary">N${{ ad.price }}</p>
               {% if ad.is_sold %}

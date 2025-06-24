@@ -164,6 +164,7 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for('home'))
 
+#Profile
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
@@ -172,16 +173,26 @@ def profile():
     if request.method == 'POST':
         file = request.files.get('profile_pic')
         if file and allowed_file(file.filename):
-            # Delete old pic if not default
+            # Delete old pic if it exists and is not the default
             if user.profile_pic and user.profile_pic != 'default-profile.png':
                 old_path = os.path.join(app.config['UPLOAD_FOLDER'], user.profile_pic)
                 if os.path.exists(old_path):
-                    os.remove(old_path)
+                    try:
+                        os.remove(old_path)
+                    except Exception as e:
+                        print(f"Error deleting old profile pic: {e}")
+
+            # Save new profile picture
             filename = save_profile_pic(file)
             if filename:
                 user.profile_pic = filename
-                db.session.commit()
-                flash("Profile picture updated.", "success")
+                try:
+                    db.session.commit()
+                    flash("Profile picture updated.", "success")
+                except Exception as e:
+                    db.session.rollback()
+                    flash("Failed to update profile picture in database.", "danger")
+                    print(f"DB commit error: {e}")
             else:
                 flash("Failed to save profile picture.", "danger")
         else:
@@ -190,6 +201,8 @@ def profile():
 
     user_ratings = Rating.query.filter_by(reviewed_id=user.id).order_by(Rating.timestamp.desc()).all()
     return render_template('profile.html', user=user, user_ratings=user_ratings)
+
+
 
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
@@ -230,6 +243,8 @@ def edit_profile():
 
     return render_template('edit_profile.html', user=user)
 
+
+#ADS
 @app.route('/ads')
 def show_ads():
     query = request.args.get('q', '').strip().lower()
@@ -245,15 +260,23 @@ def show_ads():
     if selected_category:
         ads = ads.filter_by(category=selected_category)
 
+    # Show featured ads first, then order all by newest
+    ads = ads.order_by(Ad.is_featured.desc(), Ad.id.desc())
+
+    # Get distinct categories for dropdown
     all_categories = db.session.query(Ad.category).distinct().all()
     categories = sorted(set(cat for (cat,) in all_categories if cat))
 
     return render_template('ads.html', ads=ads.all(), categories=categories)
 
+
+
+#POST
 @app.route('/post', methods=['GET', 'POST'])
 @login_required
 def post_ad():
     if request.method == 'POST':
+        # Create new ad from form data
         new_ad = Ad(
             title=request.form['title'],
             description=request.form['description'],
@@ -263,23 +286,36 @@ def post_ad():
             location=request.form['location'],
             user_id=int(session['user_id'])
         )
-        db.session.add(new_ad)
-        db.session.commit()
-        log_activity(session['user_id'], "Posted an ad")
+        
+        try:
+            # Save the ad first
+            db.session.add(new_ad)
+            db.session.commit()
 
-        for image in request.files.getlist('images'):
-            if image and allowed_file(image.filename):
-                filename = secure_filename(image.filename)
-                unique_name = f"user_{session['user_id']}_{uuid.uuid4().hex}_{filename}"
-                path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
-                image.save(path)
-                db.session.add(Image(filename=unique_name, ad_id=new_ad.id))
+            # Save uploaded images
+            images = request.files.getlist('images')
+            for image in images:
+                if image and allowed_file(image.filename):
+                    filename = secure_filename(image.filename)
+                    unique_name = f"user_{session['user_id']}_{uuid.uuid4().hex}_{filename}"
+                    path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
+                    image.save(path)
 
-        db.session.commit()
-        flash("Ad posted successfully.", "success")
-        return redirect(url_for('show_ads'))
+                    # Save image record linked to the ad
+                    db.session.add(Image(filename=unique_name, ad_id=new_ad.id))
+
+            db.session.commit()  # Commit all images in one go
+            log_activity(session['user_id'], "Posted an ad")
+            flash("Ad posted successfully.", "success")
+            return redirect(url_for('show_ads'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash("Something went wrong while posting your ad.", "danger")
+            print(f"Error posting ad: {e}")
 
     return render_template('post.html')
+
 
 @app.route('/edit/<int:ad_id>', methods=['GET', 'POST'])
 @login_required
@@ -555,14 +591,6 @@ def admin_verify_user(user_id):
     db.session.commit()
     flash(f"Verified {user.username}", "success")
     return redirect(url_for('admin_users'))
-
-
-@app.route('/admin')
-@admin_required
-def admin_dashboard():
-    return render_template('admin_dashboard.html')
-
-
 
 
 if __name__ == '__main__':
