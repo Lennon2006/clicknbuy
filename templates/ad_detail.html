@@ -38,6 +38,12 @@
       font-size: 1.1rem;
       line-height: 1;
     }
+    .verified-badge {
+      font-size: 1.3rem;
+      color: #0d6efd;
+      margin-left: 0.4rem;
+      vertical-align: middle;
+    }
     @media (max-width: 991.98px) {
       .offcanvas-body a.nav-link {
         padding: 0.75rem 1rem;
@@ -118,14 +124,17 @@
             </a>
           {% else %}
             <a href="{{ url_for('profile_public', username=ad.owner.username) }}">
-              <img src="{{ url_for('static', filename='default_profile.png') }}" alt="Default Profile Pic" class="seller-pic" />
+              <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Default Profile Pic" class="seller-pic" />
             </a>
           {% endif %}
           <div>
-            <h5 class="mb-0">
+            <h5 class="mb-0 d-flex align-items-center">
               <a href="{{ url_for('profile_public', username=ad.owner.username) }}" class="text-decoration-none text-dark">
                 {{ ad.owner.username }}
               </a>
+              {% if ad.owner.is_verified %}
+                <span class="verified-badge" title="Verified Seller">&#10004;</span>
+              {% endif %}
             </h5>
             <div class="star-rating">
               {% for i in range(1, 6) %}

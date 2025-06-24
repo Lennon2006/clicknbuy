@@ -1,7 +1,8 @@
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -12,13 +13,35 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_verified = db.Column(db.Boolean, default=False)
+
     ads = db.relationship('Ad', backref='owner', lazy=True)
-    sent_conversations = db.relationship('Conversation', foreign_keys='Conversation.seller_id', backref='seller', lazy=True)
-    received_conversations = db.relationship('Conversation', foreign_keys='Conversation.buyer_id', backref='buyer', lazy=True)
+
+    sent_conversations = db.relationship(
+        'Conversation',
+        foreign_keys='Conversation.seller_id',
+        backref='seller',
+        lazy=True
+    )
+    received_conversations = db.relationship(
+        'Conversation',
+        foreign_keys='Conversation.buyer_id',
+        backref='buyer',
+        lazy=True
+    )
     activities = db.relationship('ActivityLog', backref='user', lazy=True)
-    ratings_given = db.relationship('Rating', foreign_keys='Rating.reviewer_id', backref='reviewer', lazy=True)
-    ratings_received = db.relationship('Rating', foreign_keys='Rating.reviewed_id', backref='reviewed', lazy=True)
-    
+    ratings_given = db.relationship(
+        'Rating',
+        foreign_keys='Rating.reviewer_id',
+        backref='reviewer',
+        lazy=True
+    )
+    ratings_received = db.relationship(
+        'Rating',
+        foreign_keys='Rating.reviewed_id',
+        backref='reviewed',
+        lazy=True
+    )
+
     
 
 
@@ -48,11 +71,8 @@ class Ad(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     is_sold = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    # Add to your Ad model:
+
     is_paid = db.Column(db.Boolean, default=False)
-
-
-    # Feature Your Ad
     is_featured = db.Column(db.Boolean, default=False)
     feature_expiry = db.Column(db.DateTime, nullable=True)
 
