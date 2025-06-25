@@ -10,9 +10,16 @@ from threading import Thread
 import time
 from models import db, User, Ad, Image, Rating, ActivityLog, Conversation, Message
 import json
+from sqlalchemy import or_, and_
+from flask_socketio import SocketIO, emit
+
+
+
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
+
+socketio = SocketIO(app)
 
 # Load categories once at startup
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -491,31 +498,100 @@ def start_background_threads():
     thread.start()
 
 
+#CONVOS
+@app.route('/conversation/<int:conversation_id>', methods=['GET', 'POST'])
+def conversation_detail(conversation_id):
+    user_id = session.get('user_id')
+    conv = Conversation.query.get_or_404(conversation_id)
+
+    if user_id not in [conv.buyer_id, conv.seller_id]:
+        abort(403)
+
+    # Mark unread messages from other user as read
+    unread_messages = Message.query.filter(
+        Message.conversation_id == conv.id,
+        Message.is_read == False,
+        Message.sender_id != user_id
+    ).all()
+    for msg in unread_messages:
+        msg.is_read = True
+    db.session.commit()
+
+    # Handle sending new message
+    if request.method == 'POST' and 'new_message' in request.form:
+        content = request.form.get('new_message', '').strip()
+        if content:
+            new_msg = Message(
+                conversation_id=conv.id,
+                sender_id=user_id,
+                content=content,
+                is_read=False,
+                timestamp=datetime.utcnow()
+            )
+            db.session.add(new_msg)
+            db.session.commit()
+            return redirect(url_for('conversation_detail', conversation_id=conversation_id))
+
+    # Handle deleting a message (via query param)
+    delete_id = request.args.get('delete')
+    if delete_id:
+        msg_to_delete = Message.query.filter_by(
+            id=delete_id,
+            conversation_id=conv.id,
+            sender_id=user_id
+        ).first()
+        if msg_to_delete:
+            db.session.delete(msg_to_delete)
+            db.session.commit()
+            flash('Message deleted.', 'success')
+            return redirect(url_for('conversation_detail', conversation_id=conversation_id))
+        else:
+            flash('Cannot delete message.', 'danger')
+
+    # Handle editing a message (form submit with query param ?edit=msg_id)
+    edit_id = request.args.get('edit')
+    if edit_id and request.method == 'POST' and 'edit_message' in request.form:
+        msg_to_edit = Message.query.filter_by(
+            id=edit_id,
+            conversation_id=conv.id,
+            sender_id=user_id
+        ).first()
+        if msg_to_edit:
+            new_content = request.form.get('edit_message', '').strip()
+            if new_content:
+                msg_to_edit.content = new_content
+                db.session.commit()
+                flash('Message updated.', 'success')
+                return redirect(url_for('conversation_detail', conversation_id=conversation_id))
+            else:
+                flash('Message content cannot be empty.', 'warning')
+
+    return render_template('conversation_detail.html', conversation=conv, user_id=user_id)
+
+
 #SMS
 @app.route('/inbox')
 def inbox():
-    # Redirect to login if not logged in
-    if 'user_id' not in session:
+    user_id = session.get('user_id')
+    if not user_id:
         return redirect(url_for('login'))
-    
-    user_id = session['user_id']
 
-    # Get all conversations where user is either buyer or seller
+    # Get conversations where user is buyer or seller
     conversations = Conversation.query.filter(
-        (Conversation.buyer_id == user_id) | (Conversation.seller_id == user_id)
-    ).order_by(Conversation.created_at.desc()).all()
+        or_(Conversation.buyer_id == user_id, Conversation.seller_id == user_id)
+    ).all()
 
-    # Count unread messages per conversation for this user (messages not sent by user and not read)
-    unread_counts = {}
-    for convo in conversations:
-        unread_count = Message.query.filter_by(
-            conversation_id=convo.id,
-            is_read=False
-        ).filter(Message.sender_id != user_id).count()
-        unread_counts[convo.id] = unread_count
+    # For each conversation, check for unread messages from the other user
+    conv_with_unread = []
+    for conv in conversations:
+        unread_count = Message.query.filter(
+            Message.conversation_id == conv.id,
+            Message.is_read == False,
+            Message.sender_id != user_id
+        ).count()
+        conv_with_unread.append((conv, unread_count > 0))
 
-    return render_template('inbox.html', conversations=conversations, unread_counts=unread_counts)
-
+    return render_template('inbox.html', conversations=conv_with_unread)
 
 #/feature/<int:ad_id
 @app.route('/feature/<int:ad_id>', methods=['POST'])
@@ -548,6 +624,22 @@ def feature_ad(ad_id):
         print(f"Feature error: {e}")
 
     return redirect(url_for('ad_detail', ad_id=ad.id))
+
+#Terms and about
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
+@app.route('/terms')
+def terms():
+    return render_template('terms.html')
+
+#Typing
+@socketio.on('typing')
+def handle_typing(data):
+    emit('show_typing', data, broadcast=True)
+
+
 
 if __name__ == '__main__':
     start_background_threads()

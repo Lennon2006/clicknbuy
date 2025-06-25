@@ -22,6 +22,10 @@
           <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}" required>
         </div>
         <div class="mb-3">
+          <label for="bio" class="form-label">Bio</label>
+          <textarea class="form-control" id="bio" name="bio" rows="4" placeholder="Tell others about yourself...">{{ user.bio }}</textarea>
+        </div>
+        <div class="mb-3">
           <label for="password" class="form-label">New Password (optional)</label>
           <input type="password" class="form-control" id="password" name="password" placeholder="Leave blank to keep current">
         </div>

@@ -40,28 +40,19 @@
 
   {% if conversations %}
   <ul class="list-group">
-    {% for convo in conversations %}
-      <li class="list-group-item d-flex justify-content-between align-items-center">
-        <div>
-          <strong>Ad:</strong> "{{ convo.ad.title }}"<br />
-          <small>
-            Chat with 
-            {% if convo.buyer_id == session['user_id'] %}
-              Seller: {{ convo.seller.username }}
-            {% else %}
-              Buyer: {{ convo.buyer.username }}
-            {% endif %}
-          </small>
-        </div>
-        <div>
-          {% if unread_counts[convo.id] > 0 %}
-            <span class="badge bg-danger rounded-pill me-2">{{ unread_counts[convo.id] }} new</span>
-          {% endif %}
-          <a href="{{ url_for('messages', conversation_id=convo.id) }}" class="btn btn-primary btn-sm">Open Chat</a>
-        </div>
-      </li>
-    {% endfor %}
-  </ul>
+  {% for conv, has_unread in conversations %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      <a href="{{ url_for('conversation_detail', conversation_id=conv.id) }}">
+        Conversation about <strong>{{ conv.ad.title }}</strong>
+      </a>
+      {% if has_unread %}
+        <span class="badge bg-danger rounded-pill">New</span>
+      {% endif %}
+    </li>
+  {% else %}
+    <li class="list-group-item">No conversations yet.</li>
+  {% endfor %}
+</ul>
   {% else %}
     <p>You have no conversations yet.</p>
   {% endif %}

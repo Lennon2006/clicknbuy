@@ -13,6 +13,7 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_verified = db.Column(db.Boolean, default=False)
+    bio = db.Column(db.Text, default="")
 
     ads = db.relationship('Ad', backref='owner', lazy=True)
 
