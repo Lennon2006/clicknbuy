@@ -16,7 +16,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 # Load categories once at startup
 with open(os.path.join(basedir, 'data', 'categories.json')) as f:
-    categories = json.load(f)
+        categories = json.load(f)
 
 # Config
 UPLOAD_FOLDER = os.path.join(basedir, 'static', 'uploads')
