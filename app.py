@@ -9,13 +9,16 @@ from datetime import datetime, timedelta
 from threading import Thread
 import time
 from models import db, User, Ad, Image, Rating, ActivityLog, Conversation, Message
-from alembic import op
-import sqlalchemy as sa
+import json
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# --- Configuration ---
+# Load categories once at startup
+with open(os.path.join(basedir, 'data', 'categories.json')) as f:
+    categories = json.load(f)
+
+# Config
 UPLOAD_FOLDER = os.path.join(basedir, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -25,7 +28,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlit
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.secret_key = os.environ.get('SECRET_KEY') or 'replace_with_a_strong_random_secret_key'
 
-# Initialize DB with the Flask app
+# Initialize DB and migrations
 db.init_app(app)
 migrate = Migrate(app, db)
 
@@ -33,7 +36,8 @@ with app.app_context():
     db.create_all()
     print("Total users:", User.query.count())
 
-# Helpers
+# Helper functions
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -59,14 +63,11 @@ def admin_required(f):
             flash("User not found.", "danger")
             return redirect(url_for('login'))
 
-        print(f"DEBUG: Logged in as {user.username}, admin status: {user.is_admin}")  # Debug
-
         if not user.is_admin:
             return render_template("403.html"), 403
 
         return f(*args, **kwargs)
     return decorated_function
-
 
 def save_profile_pic(file):
     if file and allowed_file(file.filename):
@@ -94,14 +95,8 @@ def unfeature_expired_ads():
                 db.session.commit()
         time.sleep(3600)  # check every hour
 
-def upgrade():
-    op.add_column('user', sa.Column('is_verified', sa.Boolean(), nullable=True, server_default=sa.false()))
-    op.alter_column('user', 'is_verified', nullable=False, server_default=None)
-
-def downgrade():
-    op.drop_column('user', 'is_verified')
-
 # Routes
+
 @app.route('/')
 def home():
     latest_ads = Ad.query.order_by(Ad.id.desc()).limit(4).all()
@@ -146,7 +141,7 @@ def login():
             (User.username == identifier) | (User.email == identifier)
         ).first()
 
-        if user and user.check_password(password):
+        if user and check_password_hash(user.password_hash, password):
             session['user_id'] = user.id
             session['username'] = user.username
             log_activity(user.id, "Logged in")
@@ -164,7 +159,6 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for('home'))
 
-#Profile
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
@@ -173,7 +167,6 @@ def profile():
     if request.method == 'POST':
         file = request.files.get('profile_pic')
         if file and allowed_file(file.filename):
-            # Delete old pic if it exists and is not the default
             if user.profile_pic and user.profile_pic != 'default-profile.png':
                 old_path = os.path.join(app.config['UPLOAD_FOLDER'], user.profile_pic)
                 if os.path.exists(old_path):
@@ -182,7 +175,6 @@ def profile():
                     except Exception as e:
                         print(f"Error deleting old profile pic: {e}")
 
-            # Save new profile picture
             filename = save_profile_pic(file)
             if filename:
                 user.profile_pic = filename
@@ -201,8 +193,6 @@ def profile():
 
     user_ratings = Rating.query.filter_by(reviewed_id=user.id).order_by(Rating.timestamp.desc()).all()
     return render_template('profile.html', user=user, user_ratings=user_ratings)
-
-
 
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
@@ -234,7 +224,7 @@ def edit_profile():
             if new_password != confirm_password:
                 flash("Passwords do not match.", "danger")
                 return redirect(url_for('edit_profile'))
-            user.set_password(new_password)
+            user.password_hash = generate_password_hash(new_password)
 
         db.session.commit()
         session['username'] = user.username
@@ -243,8 +233,6 @@ def edit_profile():
 
     return render_template('edit_profile.html', user=user)
 
-
-#ADS
 @app.route('/ads')
 def show_ads():
     query = request.args.get('q', '').strip().lower()
@@ -260,52 +248,56 @@ def show_ads():
     if selected_category:
         ads = ads.filter_by(category=selected_category)
 
-    # Show featured ads first, then order all by newest
     ads = ads.order_by(Ad.is_featured.desc(), Ad.created_at.desc())
 
-    # Get distinct categories for dropdown
-    all_categories = db.session.query(Ad.category).distinct().all()
-    categories = sorted(set(cat for (cat,) in all_categories if cat))
-
+    # Pass the categories loaded from JSON
     return render_template('ads.html', ads=ads.all(), categories=categories)
 
-
-
-#POST
 @app.route('/post', methods=['GET', 'POST'])
 @login_required
 def post_ad():
     if request.method == 'POST':
-        # Create new ad from form data
+        title = request.form.get('title')
+        description = request.form.get('description')
+        price = request.form.get('price')
+        category = request.form.get('category')
+        subcategory = request.form.get('subcategory')
+        post_type = request.form.get('post_type')
+        contact = request.form.get('contact')
+        location = request.form.get('location')
+        user_id = int(session['user_id'])
+
+        if not all([title, description, price, category, post_type, contact]):
+            flash("Please fill out all required fields, including post type.", "danger")
+            return redirect(url_for('post_ad'))
+
         new_ad = Ad(
-            title=request.form['title'],
-            description=request.form['description'],
-            price=request.form['price'],
-            category=request.form['category'],
-            contact=request.form['contact'],
-            location=request.form['location'],
-            user_id=int(session['user_id'])
+            title=title,
+            description=description,
+            price=price,
+            category=category,
+            post_type=post_type,
+            contact=contact,
+            location=location,
+            user_id=user_id,
+            created_at=datetime.utcnow()
         )
-        
+
         try:
-            # Save the ad first
             db.session.add(new_ad)
             db.session.commit()
 
-            # Save uploaded images
             images = request.files.getlist('images')
             for image in images:
                 if image and allowed_file(image.filename):
                     filename = secure_filename(image.filename)
-                    unique_name = f"user_{session['user_id']}_{uuid.uuid4().hex}_{filename}"
+                    unique_name = f"user_{user_id}_{uuid.uuid4().hex}_{filename}"
                     path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
                     image.save(path)
-
-                    # Save image record linked to the ad
                     db.session.add(Image(filename=unique_name, ad_id=new_ad.id))
 
-            db.session.commit()  # Commit all images in one go
-            log_activity(session['user_id'], "Posted an ad")
+            db.session.commit()
+            log_activity(user_id, "Posted an ad")
             flash("Ad posted successfully.", "success")
             return redirect(url_for('show_ads'))
 
@@ -314,8 +306,7 @@ def post_ad():
             flash("Something went wrong while posting your ad.", "danger")
             print(f"Error posting ad: {e}")
 
-    return render_template('post.html')
-
+    return render_template('post.html', categories=categories)
 
 @app.route('/edit/<int:ad_id>', methods=['GET', 'POST'])
 @login_required
@@ -355,7 +346,7 @@ def edit_ad(ad_id):
         flash("Ad updated.", "success")
         return redirect(url_for('show_ads'))
 
-    return render_template('edit.html', ad=ad)
+    return render_template('edit.html', ad=ad, categories=categories)
 
 @app.route('/delete/<int:ad_id>', methods=['POST'])
 @login_required
@@ -385,7 +376,6 @@ def ad_detail(ad_id):
     seller_avg_rating = seller.average_rating() if seller else None
 
     ratings = Rating.query.filter_by(ad_id=ad.id).order_by(Rating.timestamp.desc()).all()
-    ads = Ad.query.order_by(Ad.is_featured.desc(), Ad.created_at.desc()).all()
 
     if request.method == 'POST':
         if not user_id:
@@ -480,7 +470,6 @@ def start_conversation(ad_id):
 def forbidden(error):
     return render_template("403.html"), 403
 
-# Public profile route by username
 @app.route('/user/<username>')
 def profile_public(username):
     user = User.query.filter_by(username=username).first()
@@ -488,117 +477,78 @@ def profile_public(username):
         flash("User not found.", "error")
         return redirect(url_for('home'))
 
-    # Get ads posted by user to show on public profile
     ads = Ad.query.filter_by(user_id=user.id).order_by(Ad.id.desc()).all()
-
-    # Get user ratings
     user_ratings = Rating.query.filter_by(reviewed_id=user.id).order_by(Rating.timestamp.desc()).all()
-    return render_template('profile_public.html', user=user, ads=ads, ratings=user_ratings)
 
+    avg_rating = user.average_rating() if user else None
+
+    return render_template('profile_public.html', user=user, ads=ads, avg_rating=avg_rating, ratings=user_ratings)
+
+# Run background thread for unfeaturing ads
+def start_background_threads():
+    thread = Thread(target=unfeature_expired_ads, daemon=True)
+    thread.start()
+
+
+#SMS
 @app.route('/inbox')
-@login_required
 def inbox():
-    user_id = int(session['user_id'])
+    # Redirect to login if not logged in
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = session['user_id']
+
+    # Get all conversations where user is either buyer or seller
     conversations = Conversation.query.filter(
         (Conversation.buyer_id == user_id) | (Conversation.seller_id == user_id)
-    ).order_by(Conversation.id.desc()).all()
+    ).order_by(Conversation.created_at.desc()).all()
 
+    # Count unread messages per conversation for this user (messages not sent by user and not read)
     unread_counts = {}
     for convo in conversations:
-        count = Message.query.filter(
-            Message.conversation_id == convo.id,
-            Message.is_read == False,
-            Message.sender_id != user_id
-        ).count()
-        unread_counts[convo.id] = count
+        unread_count = Message.query.filter_by(
+            conversation_id=convo.id,
+            is_read=False
+        ).filter(Message.sender_id != user_id).count()
+        unread_counts[convo.id] = unread_count
 
     return render_template('inbox.html', conversations=conversations, unread_counts=unread_counts)
 
 
-
-
-# API for editing messages
-@app.route('/edit_message/<int:message_id>', methods=['POST'])
-@login_required
-def edit_message(message_id):
-    msg = Message.query.get_or_404(message_id)
-    if msg.sender_id != session.get('user_id'):
-        return jsonify({'error': 'Unauthorized'}), 403
-    msg.content = request.json.get('content', '')
-    db.session.commit()
-    return jsonify({'success': True})
-
-# API for deleting messages
-@app.route('/delete_message/<int:message_id>', methods=['POST'])
-@login_required
-def delete_message(message_id):
-    msg = Message.query.get_or_404(message_id)
-    if msg.sender_id != session.get('user_id'):
-        return jsonify({'error': 'Unauthorized'}), 403
-    db.session.delete(msg)
-    db.session.commit()
-    return jsonify({'success': True})
-
-# Payment features
-#Feature AD
-@app.route('/feature_ad/<int:ad_id>', methods=['POST'])
+#/feature/<int:ad_id
+@app.route('/feature/<int:ad_id>', methods=['POST'])
 @login_required
 def feature_ad(ad_id):
     ad = Ad.query.get_or_404(ad_id)
 
-    # Only admin or Lennon can feature ads — optional
-    if session.get('user_id') != 1:  # If Lennon is user_id 1
-        abort(403)
+    if ad.user_id != int(session['user_id']):
+        flash("You are not authorized to feature this ad.", "danger")
+        return redirect(url_for('ad_detail', ad_id=ad.id))
 
+    if ad.is_sold:
+        flash("Sold ads cannot be featured.", "warning")
+        return redirect(url_for('ad_detail', ad_id=ad.id))
+
+    if ad.is_featured:
+        flash("This ad is already featured.", "info")
+        return redirect(url_for('ad_detail', ad_id=ad.id))
+
+    # Simulate payment here (later you’ll add real payment logic)
     ad.is_featured = True
-    ad.feature_expiry = datetime.utcnow() + timedelta(days=7)  # optional expiry logic
-    db.session.commit()
+    ad.feature_expiry = datetime.utcnow() + timedelta(days=7)
 
-    flash("Ad has been featured!", "success")
-    return redirect(url_for('show_ads'))
+    try:
+        db.session.commit()
+        flash("Your ad is now featured for 7 days!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Failed to feature your ad. Please try again.", "danger")
+        print(f"Feature error: {e}")
 
-
-@app.route('/admin/feature-requests')
-@admin_required
-def admin_feature_requests():
-    pending_ads = Ad.query.filter_by(is_featured=True).order_by(Ad.feature_expiry.desc()).all()
-    return render_template('admin_feature_requests.html', ads=pending_ads)
-
-@app.route('/admin/confirm-payment/<int:ad_id>', methods=['POST'])
-@admin_required
-def confirm_feature_payment(ad_id):
-    ad = Ad.query.get_or_404(ad_id)
-    ad.is_paid = True
-    db.session.commit()
-    flash(f"Payment confirmed for ad '{ad.title}'", "success")
-    return redirect(url_for('admin_feature_requests'))
-
-@app.route('/admin/users')
-@admin_required
-def admin_users():
-    users = User.query.order_by(User.id.desc()).all()
-    return render_template('admin_users.html', users=users)
-
-@app.route('/admin/delete-user/<int:user_id>', methods=['POST'])
-@admin_required
-def admin_delete_user(user_id):
-    user = User.query.get_or_404(user_id)
-    db.session.delete(user)
-    db.session.commit()
-    flash(f"Deleted user {user.username}", "danger")
-    return redirect(url_for('admin_users'))
-
-@app.route('/admin/verify-user/<int:user_id>', methods=['POST'])
-@admin_required
-def admin_verify_user(user_id):
-    user = User.query.get_or_404(user_id)
-    user.is_verified = True
-    db.session.commit()
-    flash(f"Verified {user.username}", "success")
-    return redirect(url_for('admin_users'))
-
+    return redirect(url_for('ad_detail', ad_id=ad.id))
 
 if __name__ == '__main__':
-    Thread(target=unfeature_expired_ads, daemon=True).start()
+    start_background_threads()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)

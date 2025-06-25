@@ -1,0 +1,72 @@
+{
+  "Vehicles": [
+    "Cars",
+    "Motorcycles",
+    "Trucks & Vans",
+    "Boats",
+    "Auto Parts & Accessories"
+  ],
+  "Electronics": [
+    "Phones",
+    "Computers & Laptops",
+    "Cameras & Photography",
+    "Audio & Headphones",
+    "TVs & Home Theater",
+    "Musical instruments",
+    "Consoles and Video Games"
+    
+  ],
+  "Home & Garden": [
+    "Furniture",
+    "Appliances",
+    "Tools & Equipment",
+    "Garden Supplies",
+    "Pet Supplies"
+  ],
+  "Clothing & Accessories": [
+    "Men’s Clothing",
+    "Women’s Clothing",
+    "Shoes",
+    "Jewelry & Watches"
+  ],
+  "Sports & Outdoors": [
+    "Exercise & Fitness",
+    "Camping & Hiking",
+    "Bicycles",
+    "Water Sports"
+  ],
+  "Toys & Games": [
+    "Kids’ Toys",
+    "Video Games",
+    "Board Games & Puzzles"
+  ],
+  "Baby & Kids": [
+    "Baby Gear",
+    "Kids’ Furniture",
+    "Clothing"
+  ],
+  "Services": [
+    "Tutoring & Classes",
+    "Home Repair & Maintenance",
+    "Event Services",
+    "Beauty & Wellness"
+  ],
+  "Jobs": [
+    "Full-Time",
+    "Part-Time",
+    "Freelance & Gigs"
+  ],
+  "Rentals": [
+    "Property Rentals",
+    "Vehicle Rentals",
+    "Equipment Rentals"
+  ],
+  "Collectibles & Art": [
+    "Antiques",
+    "Artwork",
+    "Memorabilia"
+  ],
+  "Miscellaneous": [
+    "Everything Else"
+  ]
+}
