@@ -1,11 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <title>{{ ad.title }} - Click N Buy</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
   <style>
+    :root {
+      --bg: #ffffff;
+      --text: #111;
+      --card: #f9f9f9;
+    }
+    [data-theme='dark'] {
+      --bg: #121212;
+      --text: #f0f0f0;
+      --card: #1e1e1e;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .navbar, .card, .bg-white {
+      background: var(--card) !important;
+      color: var(--text);
+    }
+
     .ad-images img {
       max-width: 100%;
       max-height: 200px;
@@ -14,6 +36,7 @@
       object-fit: cover;
       cursor: pointer;
     }
+
     .badge-sold {
       background-color: #dc3545;
       color: white;
@@ -22,11 +45,13 @@
       border-radius: 0.375rem;
       margin-left: 1rem;
     }
+
     .seller-info {
       display: flex;
       align-items: center;
       gap: 0.75rem;
     }
+
     .seller-pic {
       width: 48px;
       height: 48px;
@@ -34,25 +59,68 @@
       object-fit: cover;
       border: 2px solid #198754;
     }
+
     .star-rating {
       color: #ffc107;
       font-size: 1.1rem;
       line-height: 1;
     }
+
     .verified-badge {
       font-size: 1.3rem;
       color: #0d6efd;
       margin-left: 0.4rem;
       vertical-align: middle;
     }
+
+    .dark-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 999;
+      background: #0d6efd;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .dark-toggle:hover {
+      background-color: #084cd9;
+    }
+
+    [data-theme='dark'] .modal-content {
+      background-color: #1e1e1e;
+      color: #f0f0f0;
+    }
+
+    [data-theme='dark'] .form-control,
+    [data-theme='dark'] .form-select,
+    [data-theme='dark'] textarea {
+      background: #2a2a2a;
+      color: var(--text);
+      border-color: #555;
+    }
+
+    [data-theme='dark'] .form-control::placeholder {
+      color: #bbb;
+    }
   </style>
 </head>
-<body class="bg-light">
+<body>
 
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+<nav class="navbar navbar-expand-lg navbar-light shadow-sm">
   <div class="container">
     <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu" aria-label="Toggle navigation">
+    <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse d-none d-lg-flex justify-content-end" id="navbarNav">
@@ -70,10 +138,10 @@
   </div>
 </nav>
 
-<div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasMenu" aria-labelledby="offcanvasMenuLabel">
+<div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasMenu">
   <div class="offcanvas-header">
-    <h5 class="offcanvas-title" id="offcanvasMenuLabel">Menu</h5>
-    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    <h5 class="offcanvas-title">Menu</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
   </div>
   <div class="offcanvas-body">
     <a href="{{ url_for('home') }}" class="nav-link">Home</a>
@@ -107,16 +175,7 @@
 
         <div class="mt-4 ad-images d-flex flex-wrap">
           {% for image in ad.images %}
-            <img 
-              src="{{ url_for('static', filename='uploads/' ~ image.filename) }}" 
-              alt="Ad image {{ loop.index }}" 
-              class="me-2 mb-2 rounded" 
-              data-bs-toggle="modal" 
-              data-bs-target="#imageModal" 
-              data-bs-slide-to="{{ loop.index0 }}" 
-              role="button" 
-              aria-label="Open image {{ loop.index }} in full view"
-            >
+            <img src="{{ url_for('static', filename='uploads/' ~ image.filename) }}" alt="Ad image {{ loop.index }}" class="me-2 mb-2 rounded" data-bs-toggle="modal" data-bs-target="#imageModal" data-bs-slide-to="{{ loop.index0 }}" role="button">
           {% endfor %}
         </div>
       </div>
@@ -125,11 +184,11 @@
         <div class="seller-info mb-3">
           {% if ad.owner.profile_pic %}
             <a href="{{ url_for('profile_public', username=ad.owner.username) }}">
-              <img src="{{ url_for('static', filename='uploads/' ~ ad.owner.profile_pic) }}" alt="Seller Profile Pic" class="seller-pic" />
+              <img src="{{ url_for('static', filename='uploads/' ~ ad.owner.profile_pic) }}" alt="Seller" class="seller-pic" />
             </a>
           {% else %}
             <a href="{{ url_for('profile_public', username=ad.owner.username) }}">
-              <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Default Profile Pic" class="seller-pic" />
+              <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Default" class="seller-pic" />
             </a>
           {% endif %}
           <div>
@@ -138,7 +197,7 @@
                 {{ ad.owner.username }}
               </a>
               {% if ad.owner.is_verified %}
-                <span class="verified-badge" title="Verified Seller">&#10004;</span>
+                <span class="verified-badge">&#10004;</span>
               {% endif %}
             </h5>
             <div class="star-rating">
@@ -174,7 +233,6 @@
     </div>
 
     <hr class="my-4">
-
     <section>
       <h4 class="mb-3">Reviews</h4>
       {% if ratings %}
@@ -221,12 +279,12 @@
   </div>
 </div>
 
-<!-- Modal for image carousel -->
-<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+<!-- Image Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content bg-dark">
+    <div class="modal-content">
       <div class="modal-header border-0">
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body p-0">
         <div id="carouselIndicators" class="carousel slide" data-bs-ride="carousel" data-bs-interval="false">
@@ -237,26 +295,40 @@
               </div>
             {% endfor %}
           </div>
-          <button class="carousel-control-prev" type="button" data-bs-target="#carouselIndicators" data-bs-slide="prev" aria-label="Previous slide">
+          <button class="carousel-control-prev" type="button" data-bs-target="#carouselIndicators" data-bs-slide="prev">
             <span class="carousel-control-prev-icon"></span>
           </button>
-          <button class="carousel-control-next" type="button" data-bs-target="#carouselIndicators" data-bs-slide="next" aria-label="Next slide">
+          <button class="carousel-control-next" type="button" data-bs-target="#carouselIndicators" data-bs-slide="next">
             <span class="carousel-control-next-icon"></span>
           </button>
-          <div class="carousel-indicators mt-3">
-            {% for image in ad.images %}
-              <button type="button" data-bs-target="#carouselIndicators" data-bs-slide-to="{{ loop.index0 }}" {% if loop.first %}class="active"{% endif %} aria-label="Slide {{ loop.index }}"></button>
-            {% endfor %}
-          </div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- Dark mode toggle -->
+<button class="dark-toggle" id="toggleTheme" title="Toggle dark mode">
+  <i class="fas fa-moon"></i>
+</button>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-  // When a thumbnail image is clicked, open modal and jump to the corresponding slide
+  const themeBtn = document.getElementById('toggleTheme');
+  const html = document.documentElement;
+  const saved = localStorage.getItem('theme');
+  if (saved) {
+    html.setAttribute('data-theme', saved);
+    themeBtn.innerHTML = saved === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+  }
+  themeBtn.addEventListener('click', () => {
+    const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    themeBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+  });
+
+  // Modal image logic
   var imageModal = document.getElementById('imageModal');
   var carousel = document.getElementById('carouselIndicators');
   var bsCarousel = bootstrap.Carousel.getInstance(carousel) || new bootstrap.Carousel(carousel);
@@ -270,6 +342,5 @@
     });
   });
 </script>
-
 </body>
 </html>

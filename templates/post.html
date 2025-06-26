@@ -1,12 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Post an Ad - Click N Buy</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
   <style>
-    /* Image preview styling */
+    :root {
+      --bg: #ffffff;
+      --text: #111;
+      --card: #f9f9f9;
+      --primary: #0d6efd;
+      --primary-hover: #084cd9;
+      --shadow: rgba(0, 0, 0, 0.1);
+    }
+
+    [data-theme='dark'] {
+      --bg: #121212;
+      --text: #f0f0f0;
+      --card: #1e1e1e;
+      --primary: #4a90e2;
+      --primary-hover: #3578e5;
+      --shadow: rgba(0, 0, 0, 0.6);
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Poppins', sans-serif;
+    }
+
+    .navbar,
+    .card,
+    .form-control,
+    .form-select {
+      background-color: var(--card);
+      color: var(--text);
+    }
+
+    .form-control::placeholder {
+      color: #888;
+    }
+
+    [data-theme='dark'] .form-control,
+    [data-theme='dark'] .form-select {
+      background-color: #2a2a2a;
+      border-color: #555;
+      color: var(--text);
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 5px var(--primary);
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .btn-primary:hover,
+    .btn-primary:focus {
+      background-color: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
     .img-preview {
       height: 100px;
       width: auto;
@@ -16,11 +76,34 @@
       object-fit: cover;
       border: 1px solid #ccc;
     }
+
+    .dark-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 999;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+    }
+
+    .dark-toggle:hover {
+      background-color: var(--primary-hover);
+    }
   </style>
 </head>
-<body class="bg-light">
+<body>
 
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+<nav class="navbar navbar-expand-lg shadow-sm">
   <div class="container">
     <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -40,51 +123,28 @@
 
 <div class="container my-5">
   <div class="row justify-content-center">
-    <div class="col-12 col-md-8 col-lg-6 bg-white p-4 rounded shadow-sm">
+    <div class="col-12 col-md-8 col-lg-6 p-4 rounded shadow-sm" style="background-color: var(--card);">
       <h2 class="mb-4 text-center">Post a New Ad</h2>
       
       <form method="POST" enctype="multipart/form-data" novalidate>
         <div class="mb-3">
           <label for="title" class="form-label">Ad Title <span class="text-danger">*</span></label>
-          <input
-            type="text"
-            class="form-control"
-            id="title"
-            name="title"
-            required
-            maxlength="100"
-            placeholder="Enter a catchy title"
-          />
+          <input type="text" class="form-control" id="title" name="title" required maxlength="100" placeholder="Enter a catchy title" />
           <div class="invalid-feedback">Please enter a title.</div>
         </div>
 
         <div class="mb-3">
           <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
-          <textarea
-            class="form-control"
-            id="description"
-            name="description"
-            rows="4"
-            required
-            placeholder="Describe your item"
-          ></textarea>
+          <textarea class="form-control" id="description" name="description" rows="4" required placeholder="Describe your item"></textarea>
           <div class="invalid-feedback">Please provide a description.</div>
         </div>
 
         <div class="mb-3">
           <label for="price" class="form-label">Price <span class="text-danger">*</span></label>
-          <input
-            type="text"
-            class="form-control"
-            id="price"
-            name="price"
-            required
-            placeholder="E.g., $100 or N$1500"
-          />
+          <input type="text" class="form-control" id="price" name="price" required placeholder="E.g., $100 or N$1500" />
           <div class="invalid-feedback">Please specify a price.</div>
         </div>
 
-        <!-- POST TYPE FIELD -->
         <div class="mb-3">
           <label for="post_type" class="form-label">Post Type <span class="text-danger">*</span></label>
           <select class="form-select" id="post_type" name="post_type" required>
@@ -96,16 +156,9 @@
           <div class="invalid-feedback">Please select a post type.</div>
         </div>
 
-        <!-- CATEGORY -->
         <div class="mb-3">
           <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
-          <select
-            class="form-select"
-            id="category"
-            name="category"
-            required
-            onchange="loadSubcategories()"
-          >
+          <select class="form-select" id="category" name="category" required onchange="loadSubcategories()">
             <option value="" selected disabled>Select a category</option>
             {% for cat in categories %}
               <option value="{{ cat }}">{{ cat }}</option>
@@ -114,16 +167,9 @@
           <div class="invalid-feedback">Please select a category.</div>
         </div>
 
-        <!-- SUBCATEGORY -->
         <div class="mb-3">
           <label for="subcategory" class="form-label">Subcategory <span class="text-danger">*</span></label>
-          <select
-            class="form-select"
-            id="subcategory"
-            name="subcategory"
-            required
-            disabled
-          >
+          <select class="form-select" id="subcategory" name="subcategory" required disabled>
             <option value="" selected disabled>Select a subcategory</option>
           </select>
           <div class="invalid-feedback">Please select a subcategory.</div>
@@ -131,14 +177,7 @@
 
         <div class="mb-3">
           <label for="contact" class="form-label">Contact Info <span class="text-danger">*</span></label>
-          <input
-            type="text"
-            class="form-control"
-            id="contact"
-            name="contact"
-            required
-            placeholder="Your phone number or email"
-          />
+          <input type="text" class="form-control" id="contact" name="contact" required placeholder="Your phone number or email" />
           <div class="invalid-feedback">Please provide contact information.</div>
         </div>
 
@@ -149,14 +188,7 @@
 
         <div class="mb-3">
           <label for="images" class="form-label">Upload Images (max 10)</label>
-          <input
-            class="form-control"
-            type="file"
-            id="images"
-            name="images"
-            accept="image/*"
-            multiple
-          />
+          <input class="form-control" type="file" id="images" name="images" accept="image/*" multiple />
           <div id="preview" class="d-flex flex-wrap mt-2"></div>
         </div>
 
@@ -166,17 +198,18 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Dark Mode Toggle -->
+<button class="dark-toggle" id="toggleTheme" title="Toggle dark mode">
+  <i class="fas fa-moon"></i>
+</button>
 
-<!-- Embed categories JSON safely to avoid JS parsing errors -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script id="categories-data" type="application/json">
   {{ categories | tojson | safe }}
 </script>
 
 <script>
-  // Bootstrap validation
   (() => {
-    'use strict';
     const form = document.querySelector('form');
     form.addEventListener('submit', event => {
       if (!form.checkValidity()) {
@@ -187,7 +220,7 @@
     }, false);
   })();
 
-  // Image preview for multiple files
+  // Image preview
   const imagesInput = document.getElementById('images');
   const previewDiv = document.getElementById('preview');
 
@@ -199,35 +232,39 @@
       imagesInput.value = '';
       return;
     }
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    for (let file of files) {
       if (file.type.startsWith('image/')) {
         const img = document.createElement('img');
         img.classList.add('img-preview');
         img.file = file;
         previewDiv.appendChild(img);
-
         const reader = new FileReader();
-        reader.onload = ((aImg) => (e) => {
-          aImg.src = e.target.result;
-        })(img);
+        reader.onload = (e) => (img.src = e.target.result);
         reader.readAsDataURL(file);
       }
     }
   });
 
-  // Parse categories JSON from the safe script tag
-  const categories = JSON.parse(document.getElementById('categories-data').textContent);
+  // Dark mode logic
+  const themeBtn = document.getElementById('toggleTheme');
+  const html = document.documentElement;
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme) html.setAttribute('data-theme', savedTheme);
+  themeBtn.addEventListener('click', () => {
+    const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    themeBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+  });
 
-  // Load subcategories dynamically
+  // Subcategory logic
+  const categories = JSON.parse(document.getElementById('categories-data').textContent);
   function loadSubcategories() {
     const catSelect = document.getElementById('category');
     const subcatSelect = document.getElementById('subcategory');
     const selectedCat = catSelect.value;
 
-    // Clear existing options
     subcatSelect.innerHTML = '<option value="" selected disabled>Select a subcategory</option>';
-
     if (selectedCat && categories[selectedCat]) {
       subcatSelect.disabled = false;
       categories[selectedCat].forEach(subcat => {

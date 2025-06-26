@@ -1,112 +1,337 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Browse Ads - Click N Buy</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+  />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"
+    rel="stylesheet"
+  />
   <style>
+    :root {
+      --bg: #ffffff;
+      --text: #111;
+      --card: #f9f9f9;
+      --primary: #0d6efd;
+      --primary-hover: #084cd9;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --featured-bg: #fffbea;
+      --featured-border: gold;
+      --featured-shadow: rgba(218, 165, 32, 0.4);
+    }
+    [data-theme='dark'] {
+      --bg: #121212;
+      --text: #f0f0f0;
+      --card: #1e1e1e;
+      --primary: #4a90e2;
+      --primary-hover: #3578e5;
+      --shadow: rgba(0, 0, 0, 0.6);
+      --featured-bg: #3a2d00;
+      --featured-border: gold;
+      --featured-shadow: rgba(218, 165, 32, 0.7);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Poppins', sans-serif;
+      scroll-behavior: smooth;
+      min-height: 100vh;
+    }
+    .navbar,
+    .card {
+      background: var(--card);
+      color: var(--text);
+    }
+    .navbar-brand {
+      position: relative;
+    }
+    .navbar-brand::after {
+      content: 'Your Trusted Namibian Marketplace';
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 400;
+      color: var(--primary);
+      margin-top: 2px;
+    }
+
     .ad-card {
-      transition: transform 0.2s ease;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
       border-radius: 0.5rem;
+      box-shadow: 0 2px 6px var(--shadow);
+      background: var(--card);
+      position: relative;
+      cursor: pointer;
     }
     .ad-card:hover {
-      transform: scale(1.01);
+      transform: scale(1.03) translateY(-4px);
+      box-shadow: 0 12px 25px var(--shadow);
+      z-index: 5;
     }
     .ad-card.featured {
-      border: 2px solid gold;
-      background-color: #fffbea;
-      box-shadow: 0 0 10px rgba(218, 165, 32, 0.4);
+      border: 2px solid var(--featured-border);
+      background-color: var(--featured-bg);
+      box-shadow: 0 0 15px var(--featured-shadow);
     }
     .featured-badge {
       position: absolute;
       top: 0.5rem;
       left: 0.5rem;
-      background: gold;
+      background: var(--featured-border);
       color: black;
       padding: 0.3rem 0.6rem;
       font-weight: bold;
       font-size: 0.8rem;
       border-radius: 5px;
       z-index: 10;
+      user-select: none;
     }
     .ad-image {
       height: 180px;
       object-fit: cover;
       border-radius: 0.5rem 0.5rem 0 0;
+      width: 100%;
+    }
+
+    h2 {
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+    .form-control,
+    .form-select {
+      border-radius: 0.4rem;
+      border: 1px solid #ccc;
+      transition: border-color 0.3s ease;
+    }
+    .form-control:focus,
+    .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 5px var(--primary);
+      outline: none;
+    }
+    .btn-primary {
+      background-color: var(--primary);
+      border-color: var(--primary);
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+    .btn-primary:hover,
+    .btn-primary:focus {
+      background-color: var(--primary-hover);
+      border-color: var(--primary-hover);
+      color: white;
+    }
+
+    /* Dark mode overrides */
+    [data-theme='dark'] body {
+      background: var(--bg);
+      color: var(--text);
+    }
+    [data-theme='dark'] .navbar,
+    [data-theme='dark'] .card {
+      background: var(--card);
+      color: var(--text);
+    }
+    [data-theme='dark'] .form-control,
+    [data-theme='dark'] .form-select {
+      background: #2a2a2a;
+      border-color: #555;
+      color: var(--text);
+    }
+    [data-theme='dark'] .form-control::placeholder {
+      color: #bbb;
+    }
+    [data-theme='dark'] .form-control:focus,
+    [data-theme='dark'] .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 5px var(--primary);
+    }
+    [data-theme='dark'] .btn-primary {
+      background-color: var(--primary);
+      border-color: var(--primary);
+    }
+    [data-theme='dark'] .btn-primary:hover,
+    [data-theme='dark'] .btn-primary:focus {
+      background-color: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    /* Dark mode toggle button */
+    .dark-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 999;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .dark-toggle:hover {
+      background-color: var(--primary-hover);
     }
   </style>
 </head>
-<body class="bg-light">
-
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
-  <div class="container">
-    <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
-        <li class="nav-item"><a class="nav-link active" href="{{ url_for('show_ads') }}">View Ads</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('post_ad') }}">Post Ad</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
-      </ul>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-light shadow-sm">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#navbarNav"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div
+        class="collapse navbar-collapse justify-content-end"
+        id="navbarNav"
+      >
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('show_ads') }}"
+              >View Ads</a
+            >
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('post_ad') }}">Post Ad</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('profile') }}">Profile</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+          </li>
+        </ul>
+      </div>
     </div>
-  </div>
-</nav>
+  </nav>
 
-<div class="container my-5">
-  <h2 class="mb-4 text-center">Browse Ads</h2>
+  <div class="container my-5">
+    <h2 class="text-center">Browse Ads</h2>
 
-  <!-- Filter/Search Bar -->
-  <form class="row g-3 mb-4" method="get" action="{{ url_for('show_ads') }}">
-    <div class="col-md-6">
-      <input type="text" class="form-control" name="q" placeholder="Search ads..." value="{{ request.args.get('q', '') }}">
-    </div>
-    <div class="col-md-4">
-      <select class="form-select" name="category">
-        <option value="">All Categories</option>
-        {% for cat in categories %}
-          <option value="{{ cat }}" {% if cat == request.args.get('category') %}selected{% endif %}>{{ cat }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-2 d-grid">
-      <button type="submit" class="btn btn-primary">Filter</button>
-    </div>
-  </form>
+    <!-- Filter/Search Bar -->
+    <form
+      class="row g-3 mb-4"
+      method="get"
+      action="{{ url_for('show_ads') }}"
+    >
+      <div class="col-md-6">
+        <input
+          type="text"
+          class="form-control"
+          name="q"
+          placeholder="Search ads..."
+          value="{{ request.args.get('q', '') }}"
+        />
+      </div>
+      <div class="col-md-4">
+        <select class="form-select" name="category">
+          <option value="">All Categories</option>
+          {% for cat in categories %}
+          <option
+            value="{{ cat }}"
+            {% if cat == request.args.get('category') %}selected{% endif %}
+          >
+            {{ cat }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-grid">
+        <button type="submit" class="btn btn-primary">Filter</button>
+      </div>
+    </form>
 
-  <!-- Ads Grid -->
-  <div class="row">
-    {% if ads %}
+    <!-- Ads Grid -->
+    <div class="row">
+      {% if ads %}
       {% for ad in ads %}
       <div class="col-md-6 col-lg-4 mb-4">
-        <div class="card ad-card shadow-sm position-relative {% if ad.is_featured %}featured{% endif %}">
+        <div
+          class="card ad-card shadow-sm position-relative
+          {% if ad.is_featured %}featured{% endif %}"
+        >
           {% if ad.is_featured %}
-            <span class="featured-badge">Featured</span>
+          <span class="featured-badge">Featured</span>
           {% endif %}
           {% if ad.images %}
-            <img src="{{ url_for('static', filename='uploads/' + ad.images[0].filename) }}" class="card-img-top ad-image" alt="{{ ad.title }}">
+          <img
+            src="{{ url_for('static', filename='uploads/' + ad.images[0].filename) }}"
+            class="card-img-top ad-image"
+            alt="{{ ad.title }}"
+          />
           {% else %}
-            <img src="{{ url_for('static', filename='default.jpg') }}" class="card-img-top ad-image" alt="{{ ad.title }}">
+          <img
+            src="{{ url_for('static', filename='default.jpg') }}"
+            class="card-img-top ad-image"
+            alt="{{ ad.title }}"
+          />
           {% endif %}
           <div class="card-body">
             <h5 class="card-title">{{ ad.title }}</h5>
-            <p class="card-text text-muted mb-1">{{ ad.category }} | {{ ad.post_type }}</p>
+            <p class="card-text text-muted mb-1">
+              {{ ad.category }} | {{ ad.post_type }}
+            </p>
             <p class="card-text fw-bold">{{ ad.price }}</p>
-            <a href="{{ url_for('ad_detail', ad_id=ad.id) }}" class="btn btn-outline-primary btn-sm">View Details</a>
+            <a
+              href="{{ url_for('ad_detail', ad_id=ad.id) }}"
+              class="btn btn-outline-primary btn-sm"
+              >View Details</a
+            >
           </div>
         </div>
       </div>
       {% endfor %}
-    {% else %}
+      {% else %}
       <p class="text-center">No ads found.</p>
-    {% endif %}
+      {% endif %}
+    </div>
   </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Dark mode toggle button -->
+  <button class="dark-toggle" id="toggleTheme" title="Toggle dark mode">
+    <i class="fas fa-moon"></i>
+  </button>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+  ></script>
+  <script>
+    const themeBtn = document.getElementById('toggleTheme');
+    const html = document.documentElement;
+    const saved = localStorage.getItem('theme');
+    if (saved) html.setAttribute('data-theme', saved);
+    themeBtn.addEventListener('click', () => {
+      const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      themeBtn.innerHTML =
+        newTheme === 'dark'
+          ? '<i class="fas fa-sun"></i>'
+          : '<i class="fas fa-moon"></i>';
+    });
+  </script>
 </body>
 </html>
