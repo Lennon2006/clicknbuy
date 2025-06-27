@@ -175,7 +175,7 @@
 
         <div class="mt-4 ad-images d-flex flex-wrap">
           {% for image in ad.images %}
-            <img src="{{ url_for('static', filename='uploads/' ~ image.filename) }}" alt="Ad image {{ loop.index }}" class="me-2 mb-2 rounded" data-bs-toggle="modal" data-bs-target="#imageModal" data-bs-slide-to="{{ loop.index0 }}" role="button">
+            <img src="{{ url_for('static', filename='uploads/' ~ image.filename) }}" alt="Ad image {{ loop.index }}" class="me-2 mb-2 rounded" data-bs-toggle="modal" data-bs-target="#imageModal" data-bs-slide-to="{{ loop.index0 }}" role="button" tabindex="0" />
           {% endfor %}
         </div>
       </div>
@@ -221,7 +221,7 @@
 
         {% if session.get('user_id') == ad.user_id and not ad.is_featured and not ad.is_sold %}
           <form action="{{ url_for('feature_ad', ad_id=ad.id) }}" method="POST" class="mt-3">
-            <button class="btn btn-warning w-100">🌟 Feature this Ad (N$10 for 7 days)</button>
+            <button class="btn btn-warning w-100">🌟 Feature this Ad for 7 days for free!</button>
           </form>
         {% elif session.get('user_id') == ad.user_id and ad.is_featured %}
           <div class="alert alert-success mt-3 text-center">
@@ -280,14 +280,14 @@
 </div>
 
 <!-- Image Modal -->
-<div class="modal fade" id="imageModal" tabindex="-1">
+<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header border-0">
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body p-0">
-        <div id="carouselIndicators" class="carousel slide" data-bs-ride="carousel" data-bs-interval="false">
+        <div id="carouselIndicators" class="carousel slide" data-bs-interval="false">
           <div class="carousel-inner">
             {% for image in ad.images %}
               <div class="carousel-item {% if loop.first %}active{% endif %}">
@@ -296,10 +296,12 @@
             {% endfor %}
           </div>
           <button class="carousel-control-prev" type="button" data-bs-target="#carouselIndicators" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon"></span>
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Previous</span>
           </button>
           <button class="carousel-control-next" type="button" data-bs-target="#carouselIndicators" data-bs-slide="next">
-            <span class="carousel-control-next-icon"></span>
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Next</span>
           </button>
         </div>
       </div>
@@ -331,7 +333,15 @@
   // Modal image logic
   var imageModal = document.getElementById('imageModal');
   var carousel = document.getElementById('carouselIndicators');
-  var bsCarousel = bootstrap.Carousel.getInstance(carousel) || new bootstrap.Carousel(carousel);
+
+  // Initialize carousel with no auto-slide
+  var bsCarousel = bootstrap.Carousel.getInstance(carousel);
+  if (!bsCarousel) {
+    bsCarousel = new bootstrap.Carousel(carousel, {
+      interval: false,
+      ride: false
+    });
+  }
 
   document.querySelectorAll('.ad-images img').forEach(function(img) {
     img.addEventListener('click', function() {

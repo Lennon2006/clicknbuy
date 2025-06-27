@@ -2,243 +2,111 @@
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{{ user.username }}'s Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>{{ user.username }}'s Profile - Click N Buy</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
   <style>
-    :root {
-      --bg: #ffffff;
-      --text: #111;
-      --card: #f9f9f9;
-      --primary: #0d6efd;
-      --primary-hover: #084cd9;
-      --shadow: rgba(0, 0, 0, 0.1);
-    }
-    [data-theme='dark'] {
-      --bg: #121212;
-      --text: #f0f0f0;
-      --card: #1e1e1e;
-      --primary: #4a90e2;
-      --primary-hover: #3578e5;
-      --shadow: rgba(0, 0, 0, 0.6);
-    }
-    body {
-      background-color: var(--bg);
-      color: var(--text);
-      font-family: 'Poppins', sans-serif;
-    }
-    .profile-pic {
-      width: 130px;
-      height: 130px;
-      object-fit: cover;
-      border-radius: 50%;
-      border: 3px solid var(--primary);
-    }
-    .verified-badge {
-      color: var(--primary);
-      font-size: 1.4rem;
-      vertical-align: middle;
-      margin-left: 0.3rem;
-    }
-    @media (max-width: 576px) {
-      .profile-pic {
-        width: 100px;
-        height: 100px;
-      }
-    }
-    .list-group-item .btn {
-      width: 80px;
-    }
-    .star {
-      color: #ffc107;
-      font-size: 1.2rem;
-    }
-    .rating-summary {
-      font-size: 1.1rem;
-      margin-bottom: 1rem;
-    }
-    .review-comment {
-      background: var(--card);
-      padding: 10px;
-      border-radius: 5px;
-      margin-bottom: 0.5rem;
-      font-style: italic;
-      box-shadow: 0 0 5px var(--shadow);
-    }
-    /* Navbar, cards and inputs use card background and text color */
-    .navbar,
-    .list-group-item,
-    .btn-outline-primary,
-    .btn-outline-danger,
-    .btn-outline-primary:hover,
-    .btn-outline-danger:hover {
-      background-color: var(--card);
-      color: var(--text);
-      border-color: var(--primary);
-    }
-    .btn-primary {
-      background-color: var(--primary);
-      border-color: var(--primary);
-    }
-    .btn-primary:hover,
-    .btn-primary:focus {
-      background-color: var(--primary-hover);
-      border-color: var(--primary-hover);
-    }
-    /* Dark mode toggle button */
-    .dark-toggle {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 999;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.2rem;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-      cursor: pointer;
-    }
-    .dark-toggle:hover {
-      background-color: var(--primary-hover);
-    }
+    :root { --bg: #ffffff; --text: #111; --card: #f9f9f9; --primary: #0d6efd; --primary-hover: #084cd9; --shadow: rgba(0,0,0,0.1); }
+    [data-theme='dark'] { --bg: #121212; --text: #f0f0f0; --card: #1e1e1e; --primary: #4a90e2; --primary-hover: #3578e5; --shadow: rgba(0,0,0,0.6); }
+    body { background-color: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; }
+    .navbar, .tab-content > .tab-pane, .profile-pic { background-color: var(--card); color: var(--text); }
+    .profile-pic { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 3px solid var(--primary); }
+    .nav-tabs { overflow-x: auto; white-space: nowrap; }
+    .nav-tabs .nav-item { display: inline-block; }
+    .nav-tabs .nav-link { white-space: normal; }
+    .tab-content > .tab-pane { padding: 1rem; border-radius: .5rem; box-shadow: 0 0 5px var(--shadow); }
+    .btn-primary { background-color: var(--primary); border-color: var(--primary); }
+    .btn-primary:hover { background-color: var(--primary-hover); }
+    /* Dark toggle styling */
+    .dark-toggle { position: fixed; bottom: 20px; right: 20px; z-index: 999; background: var(--primary); color: white; border: none; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1rem; box-shadow: 0 4px 8px rgba(0,0,0,0.3); cursor: pointer; }
+    .dark-toggle:hover { background-color: var(--primary-hover); }
   </style>
 </head>
 <body>
-
 <nav class="navbar navbar-expand-lg shadow-sm">
-  <div class="container">
+  <div class="container-fluid" style="background-color: var(--card)">
     <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-      <ul class="navbar-nav align-items-center">
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('show_ads') }}">View Ads</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('post_ad') }}">Post Ad</a></li>
-        <li class="nav-item d-none d-sm-block">
-          {% if user.profile_pic %}
-            <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" alt="Avatar" class="rounded-circle" width="32" height="32" />
-          {% else %}
-            <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Avatar" class="rounded-circle" width="32" height="32" />
-          {% endif %}
-        </li>
-        <li class="nav-item">
-          <span class="nav-link">
-            Hi, {{ user.username }}
-            {% if user.is_verified %}
-              <span class="verified-badge" title="Verified">&#10004;</span>
-            {% endif %}
-          </span>
-        </li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('show_ads') }}">Back to Ads</a></li>
       </ul>
     </div>
   </div>
 </nav>
 
-<div class="container my-5">
-  <div class="row justify-content-center">
-    <div class="col-12 col-md-8 col-lg-6 rounded shadow-sm" style="background-color: var(--card); padding: 1.5rem;">
-
-      <div class="text-center mb-4">
-        <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) if user.profile_pic else url_for('static', filename='images/default-profile.png') }}" alt="Profile Picture" class="profile-pic mb-3" />
-        <form method="POST" enctype="multipart/form-data" action="{{ url_for('profile') }}" class="w-100">
-          <label for="profile_pic" class="form-label">Update Profile Picture</label>
-          <input class="form-control form-control-sm" type="file" id="profile_pic" name="profile_pic" accept="image/*" required />
-          <button type="submit" class="btn btn-primary btn-sm mt-2 w-100">Upload</button>
-        </form>
-      </div>
-
-      <h2 class="mb-3 text-center">
-        Welcome, <strong>{{ user.username }}</strong>
-        {% if user.is_verified %}
-          <span class="verified-badge" title="Verified">&#10004;</span>
-        {% endif %}
-      </h2>
-      <p class="text-center"><strong>Email:</strong> {{ user.email }}</p>
-
-      <div class="text-center mt-2 mb-4">
-        <a href="{{ url_for('edit_profile') }}" class="btn btn-outline-primary btn-sm">Edit Profile Info</a>
-      </div>
-
-      <!-- User Rating Summary -->
-      <div class="rating-summary text-center mb-4">
-        {% if user_ratings %}
-          {% set avg_stars = (user_ratings | map(attribute='stars') | sum / (user_ratings | length)) | round(1) %}
-          <strong>Average Rating:</strong>
-          {% for i in range(1, 6) %}
-            {% if i <= avg_stars %}
-              <span class="star">&#9733;</span>
-            {% elif i - avg_stars < 1 %}
-              <span class="star">&#9733;</span>
-            {% else %}
-              <span class="star text-muted">&#9733;</span>
-            {% endif %}
-          {% endfor %}
-          <br />
-          <small>{{ user_ratings|length }} review{{ user_ratings|length > 1 and 's' or '' }}</small>
-        {% else %}
-          <p>No ratings yet.</p>
-        {% endif %}
-      </div>
-
-      <!-- Reviews -->
-      <h4 class="mb-3">User Reviews</h4>
-      {% if user_ratings %}
-        {% for rating in user_ratings %}
-          <div class="review-comment">
-            <strong>{{ rating.reviewer.username }}</strong> -
-            {% for i in range(1, 6) %}
-              {% if i <= rating.stars %}
-                <span class="star">&#9733;</span>
-              {% else %}
-                <span class="star text-muted">&#9733;</span>
-              {% endif %}
-            {% endfor %}
-            <br />
-            <small>{{ rating.timestamp.strftime('%Y-%m-%d') }}</small>
-            <p>{{ rating.comment or 'No comment.' }}</p>
-          </div>
-        {% endfor %}
-      {% else %}
-        <p>No reviews yet.</p>
-      {% endif %}
-
-      <h3 class="mt-4 mb-3">Your Ads</h3>
-
-      {% if user.ads %}
-        <div class="list-group">
-          {% for ad in user.ads %}
-            <div class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
-              <div class="mb-2 mb-md-0">
-                <strong>{{ ad.title }}</strong> — <span class="text-primary fw-semibold">{{ ad.price }}</span><br />
-                <small class="text-muted">{{ ad.category }}</small>
-              </div>
-              <div class="d-flex">
-                <a href="{{ url_for('edit_ad', ad_id=ad.id) }}" class="btn btn-sm btn-outline-primary me-2">Edit</a>
-                <form action="{{ url_for('delete_ad', ad_id=ad.id) }}" method="POST" class="d-inline">
-                  <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                </form>
-              </div>
+<div class="container my-4">
+  <div class="row g-3">
+    <div class="col-12 col-md-4 text-center">
+      <img
+        src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) if user.profile_pic else url_for('static', filename='images/logo.png') }}"
+        class="profile-pic mx-auto d-block mb-2"
+        alt="Profile"
+      />
+      <h4 class="h5">{{ user.username }} {% if user.is_verified %}<i class="fas fa-check-circle text-primary"></i>{% endif %}</h4>
+      <p class="small mb-2"><strong>Email:</strong> {{ user.email }}</p>
+      <a href="{{ url_for('edit_profile') }}" class="btn btn-outline-primary btn-sm mb-1 w-100">Edit Profile</a>
+      <a href="{{ url_for('profile_public', username=user.username) }}" class="btn btn-outline-secondary btn-sm w-100">View Public</a>
+    </div>
+    <div class="col-12 col-md-8">
+      <ul class="nav nav-tabs" id="profileTab" role="tablist">
+        <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#adsTab">My Ads</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#reviewsTab">Reviews ({{ user_ratings|length }})</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#securityTab">Security</button></li>
+      </ul>
+      <div class="tab-content mt-2">
+        <div class="tab-pane fade show active" id="adsTab">
+          {% if user.ads %}
+            <div class="list-group list-group-flush">
+              {% for ad in user.ads %}
+                <div class="list-group-item d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center">
+                  <div class="mb-2 mb-sm-0">
+                    <strong>{{ ad.title }}</strong> - N${{ ad.price }}<br><small>{{ ad.category }}</small>
+                  </div>
+                  <div>
+                    <a href="{{ url_for('edit_ad', ad_id=ad.id) }}" class="btn btn-sm btn-outline-primary me-1 mb-1">Edit</a>
+                    <form method="POST" action="{{ url_for('delete_ad', ad_id=ad.id) }}" class="d-inline">
+                      <button class="btn btn-sm btn-outline-danger mb-1">Delete</button>
+                    </form>
+                  </div>
+                </div>
+              {% endfor %}
             </div>
-          {% endfor %}
+          {% else %}
+            <p class="text-center py-3">No ads yet. <a href="{{ url_for('post_ad') }}">Post your first ad</a>.</p>
+          {% endif %}
         </div>
-      {% else %}
-        <p class="text-center">You have not posted any ads yet.</p>
-      {% endif %}
-
-      <div class="mt-4">
-        <a href="{{ url_for('post_ad') }}" class="btn btn-primary btn-lg w-100">Post a New Ad</a>
+        <div class="tab-pane fade" id="reviewsTab">
+          {% if user_ratings %}
+            {% for r in user_ratings %}
+              <div class="mb-3 p-3 rounded" style="background: var(--card); box-shadow:0 0 3px var(--shadow)">
+                <div class="d-flex justify-content-between"><strong>{{ r.reviewer.username }}</strong><span class="small text-muted">{{ r.timestamp.strftime('%Y-%m-%d') }}</span></div>
+                <div class="mb-1">{{ '★' * r.stars }}{{ '☆' * (5-r.stars) }}</div>
+                <p class="mb-0">{{ r.comment or 'No comment.' }}</p>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-center py-3">No reviews yet.</p>
+          {% endif %}
+        </div>
+        <div class="tab-pane fade" id="securityTab">
+          <h5>Change Password</h5>
+          <form method="POST" action="{{ url_for('edit_profile') }}">
+            <div class="mb-2">
+              <label for="password" class="form-label small">New Password</label>
+              <input type="password" class="form-control form-control-sm" id="password" name="password">
+            </div>
+            <div class="mb-2">
+              <label for="confirm_password" class="form-label small">Confirm Password</label>
+              <input type="password" class="form-control form-control-sm" id="confirm_password" name="confirm_password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm mt-1">Update Password</button>
+          </form>
+        </div>
       </div>
-
     </div>
   </div>
 </div>
@@ -247,22 +115,18 @@
 <button class="dark-toggle" id="toggleTheme" title="Toggle dark mode">
   <i class="fas fa-moon"></i>
 </button>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/js/all.min.js"></script>
 <script>
   const themeBtn = document.getElementById('toggleTheme');
   const html = document.documentElement;
   const savedTheme = localStorage.getItem('theme');
   if (savedTheme) html.setAttribute('data-theme', savedTheme);
-  if(savedTheme === 'dark') {
-    themeBtn.innerHTML = '<i class="fas fa-sun"></i>';
-  }
+  if (savedTheme === 'dark') themeBtn.innerHTML = '<i class="fas fa-sun"></i>';
   themeBtn.addEventListener('click', () => {
     const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     html.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
-    themeBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    themeBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';  
   });
 </script>
 </body>

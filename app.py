@@ -9,9 +9,11 @@ from datetime import datetime, timedelta
 from threading import Thread
 import time
 from models import db, User, Ad, Image, Rating, ActivityLog, Conversation, Message
+from flask_login import login_required, current_user
 import json
 from sqlalchemy import or_, and_
 from flask_socketio import SocketIO, emit
+from flask_login import LoginManager
 
 
 
@@ -36,6 +38,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlit
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.secret_key = os.environ.get('SECRET_KEY') or 'replace_with_a_strong_random_secret_key'
 
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+login_manager.init_app(app)
+
 # Initialize DB and migrations
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -44,7 +50,21 @@ with app.app_context():
     db.create_all()
     print("Total users:", User.query.count())
 
+
+# Decorator to restrict admin access
+def admin_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            flash("Admin access required.", "danger")
+            return redirect(url_for('auth.login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 # Helper functions
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -93,20 +113,28 @@ def log_activity(user_id, action):
     db.session.commit()
 
 def unfeature_expired_ads():
-    while True:
-        with app.app_context():
-            now = datetime.utcnow()
-            expired_ads = Ad.query.filter(Ad.is_featured == True, Ad.feature_expiry < now).all()
-            for ad in expired_ads:
-                ad.is_featured = False
-            if expired_ads:
-                db.session.commit()
-        time.sleep(3600)  # check every hour
+    expired_ads = Ad.query.filter(
+        Ad.is_featured == True,
+        Ad.feature_expiry != None,
+        Ad.feature_expiry < datetime.utcnow()
+    ).all()
+
+    for ad in expired_ads:
+        ad.is_featured = False
+        ad.feature_expiry = None
+
+    if expired_ads:
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Unfeature error: {e}")
 
 # Routes
 
 @app.route('/')
 def home():
+    unfeature_expired_ads()  # ✅ cleanup expired featured ads
     latest_ads = Ad.query.order_by(Ad.id.desc()).limit(4).all()
     return render_template('home.html', latest_ads=latest_ads)
 
@@ -170,9 +198,12 @@ def logout():
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
+    unfeature_expired_ads()
     user = User.query.get_or_404(int(session['user_id']))
-
+    updated = False
+ 
     if request.method == 'POST':
+        # Handle Profile Picture Upload
         file = request.files.get('profile_pic')
         if file and allowed_file(file.filename):
             if user.profile_pic and user.profile_pic != 'default-profile.png':
@@ -186,21 +217,35 @@ def profile():
             filename = save_profile_pic(file)
             if filename:
                 user.profile_pic = filename
-                try:
-                    db.session.commit()
-                    flash("Profile picture updated.", "success")
-                except Exception as e:
-                    db.session.rollback()
-                    flash("Failed to update profile picture in database.", "danger")
-                    print(f"DB commit error: {e}")
+                updated = True
             else:
                 flash("Failed to save profile picture.", "danger")
-        else:
-            flash("Invalid file or no file selected.", "warning")
-        return redirect(url_for('profile'))
 
+        # Handle Bio Update
+        bio = request.form.get('bio', '').strip()
+        if bio != user.bio:
+            user.bio = bio
+            updated = True
+
+        # Commit changes if any
+        if updated:
+            try:
+                db.session.commit()
+                flash("Profile updated successfully.", "success")
+            except Exception as e:
+                db.session.rollback()
+                flash("Failed to update profile.", "danger")
+                print(f"DB commit error: {e}")
+        else:
+            flash("No changes detected.", "info")
+
+        return redirect(url_for('profile'))
+        
+
+    # On GET, load ratings and ads for display
     user_ratings = Rating.query.filter_by(reviewed_id=user.id).order_by(Rating.timestamp.desc()).all()
-    return render_template('profile.html', user=user, user_ratings=user_ratings)
+    ads = Ad.query.filter_by(user_id=user.id).order_by(Ad.id.desc()).all()
+    return render_template('profile.html', user=user, user_ratings=user_ratings, ads=ads)
 
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
@@ -208,38 +253,102 @@ def edit_profile():
     user = User.query.get_or_404(int(session['user_id']))
 
     if request.method == 'POST':
-        new_username = request.form.get('username', '').strip()
-        new_email = request.form.get('email', '').strip()
-        new_password = request.form.get('password', '')
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip()
+        bio = request.form.get('bio', '').strip()
+        password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
 
-        if not new_username or not new_email:
-            flash("Username and email are required.", "danger")
-            return redirect(url_for('edit_profile'))
+        updated = False
 
-        if new_username != user.username and User.query.filter_by(username=new_username).first():
-            flash("Username already taken.", "danger")
-            return redirect(url_for('edit_profile'))
-
-        if new_email != user.email and User.query.filter_by(email=new_email).first():
-            flash("Email already in use.", "danger")
-            return redirect(url_for('edit_profile'))
-
-        user.username = new_username
-        user.email = new_email
-
-        if new_password:
-            if new_password != confirm_password:
-                flash("Passwords do not match.", "danger")
+        # Validate username uniqueness if changed
+        if username != user.username:
+            if User.query.filter_by(username=username).first():
+                flash('Username already taken.', 'danger')
                 return redirect(url_for('edit_profile'))
-            user.password_hash = generate_password_hash(new_password)
+            user.username = username
+            updated = True
 
-        db.session.commit()
-        session['username'] = user.username
-        flash("Profile updated successfully.", "success")
+        # Validate email uniqueness if changed
+        if email != user.email:
+            if User.query.filter_by(email=email).first():
+                flash('Email already in use.', 'danger')
+                return redirect(url_for('edit_profile'))
+            user.email = email
+            updated = True
+
+        # Update bio
+        if bio != user.bio:
+            user.bio = bio
+            updated = True
+
+        # Handle password update
+        if password:
+            if password != confirm_password:
+                flash('Passwords do not match.', 'danger')
+                return redirect(url_for('edit_profile'))
+            user.set_password(password)
+            updated = True
+
+        # Handle profile picture upload
+        file = request.files.get('profile_pic')
+        if file and allowed_file(file.filename):
+            # Remove old pic if not default
+            if user.profile_pic and user.profile_pic != 'default-profile.png':
+                old_path = os.path.join(app.config['UPLOAD_FOLDER'], user.profile_pic)
+                if os.path.exists(old_path):
+                    try:
+                        os.remove(old_path)
+                    except Exception as e:
+                        print(f"Error deleting old profile pic: {e}")
+
+            filename = save_profile_pic(file)
+            if filename:
+                user.profile_pic = filename
+                updated = True
+            else:
+                flash("Failed to save profile picture.", "danger")
+
+        # Commit changes if anything updated
+        if updated:
+            try:
+                db.session.commit()
+                flash('Profile updated successfully.', 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash('Failed to update profile. Please try again.', 'danger')
+                print(f"Error updating profile: {e}")
+        else:
+            flash('No changes detected.', 'info')
+
         return redirect(url_for('profile'))
 
+    # GET request - render edit form
     return render_template('edit_profile.html', user=user)
+
+
+@app.route('/verify_account', methods=['POST'])
+@login_required
+def verify_account():
+    user = User.query.get_or_404(int(session['user_id']))
+
+    if user.is_verified:
+        flash("Your account is already verified.", "info")
+        return redirect(url_for('profile'))
+
+    # Skip payment, instantly verify
+    user.is_verified = True
+    try:
+        db.session.commit()
+        flash("Your account is now verified! (Free for now)", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("Verification failed. Please try again.", "danger")
+        print(f"Verification error: {e}")
+
+    return redirect(url_for('profile'))
+
+
 
 @app.route('/ads')
 def show_ads():
@@ -611,19 +720,20 @@ def feature_ad(ad_id):
         flash("This ad is already featured.", "info")
         return redirect(url_for('ad_detail', ad_id=ad.id))
 
-    # Simulate payment here (later you’ll add real payment logic)
+    # Skip payment, instantly feature ad
     ad.is_featured = True
     ad.feature_expiry = datetime.utcnow() + timedelta(days=7)
 
     try:
         db.session.commit()
-        flash("Your ad is now featured for 7 days!", "success")
+        flash("Your ad is now featured for 7 days! (Free for now)", "success")
     except Exception as e:
         db.session.rollback()
         flash("Failed to feature your ad. Please try again.", "danger")
         print(f"Feature error: {e}")
 
     return redirect(url_for('ad_detail', ad_id=ad.id))
+
 
 #Terms and about
 @app.route('/about')
@@ -640,6 +750,43 @@ def handle_typing(data):
     emit('show_typing', data, broadcast=True)
 
 
+# Show all users
+@app.route('/admin/users')
+@login_required
+@admin_required
+def admin_users():
+    users = User.query.all()
+    return render_template('admin_users.html', users=users)
+
+# Delete a user
+@app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if user.id == current_user.id:
+        flash("You cannot delete your own account from admin.", "danger")
+        return redirect(url_for('admin_users'))
+
+    db.session.delete(user)
+    db.session.commit()
+    flash(f"User {user.username} deleted successfully.", "success")
+    return redirect(url_for('admin_users'))
+
+# Verify a user
+@app.route('/admin/users/verify/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def admin_verify_user(user_id):
+    user = User.query.get_or_404(user_id)
+    user.is_verified = True
+    db.session.commit()
+    flash(f"User {user.username} verified.", "success")
+    return redirect(url_for('admin_users'))
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 if __name__ == '__main__':
     start_background_threads()

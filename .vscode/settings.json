@@ -1,0 +1,8 @@
+{
+  "terminal.integrated.cwd": "C:/Users/jones/Documents/CLICK N BUY",
+  "python.envFile": "${workspaceFolder}/.env",
+  "python.defaultInterpreterPath": "C:/Users/jones/AppData/Local/Programs/Python/Python313/python.exe",
+  "editor.formatOnSave": true,
+  "python.analysis.autoSearchPaths": true,
+  "python.analysis.usePYTHONPATH": true
+}

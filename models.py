@@ -1,6 +1,9 @@
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 
+
+
+
 db = SQLAlchemy()
 
 # ------------------ USER MODEL ------------------ #
@@ -13,7 +16,8 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_verified = db.Column(db.Boolean, default=False)
-    bio = db.Column(db.Text, default="")
+    bio = db.Column(db.Text, nullable=True, default="")
+    profile_pic = db.Column(db.String(255), nullable=False, default='default-profile.png')
 
     ads = db.relationship('Ad', backref='owner', lazy=True)
 
@@ -60,26 +64,39 @@ class User(db.Model):
 
 
 # ------------------ AD MODEL ------------------ #
+
 class Ad(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    
+    # Main ad content
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
     price = db.Column(db.String(50), nullable=False)
-    category = db.Column(db.String(50), nullable=False)
     post_type = db.Column(db.String(20), nullable=False, default='For Sale')
-    subcategory = db.Column(db.String(50), nullable=True)  # Added subcategory
+    category = db.Column(db.String(50), nullable=False)
+    subcategory = db.Column(db.String(50), nullable=True)
+    
+    # User contact/location
     contact = db.Column(db.String(100), nullable=False)
     location = db.Column(db.String(100), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
+    # Status flags
     is_sold = db.Column(db.Boolean, default=False)
-    is_paid = db.Column(db.Boolean, default=False)
+    is_paid = db.Column(db.Boolean, default=False)  # For future paid/boosted ad features
     is_featured = db.Column(db.Boolean, default=False)
     feature_expiry = db.Column(db.DateTime, nullable=True)
 
+    # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Relationships
     images = db.relationship('Image', backref='ad', lazy=True, cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<Ad {self.title}>"
+    
+    
 
 
 # ------------------ IMAGE MODEL ------------------ #
