@@ -13,7 +13,7 @@ from flask_login import login_required, current_user
 import json
 from sqlalchemy import or_, and_
 from flask_socketio import SocketIO, emit
-from flask_login import LoginManager
+
 
 
 
@@ -38,9 +38,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlit
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.secret_key = os.environ.get('SECRET_KEY') or 'replace_with_a_strong_random_secret_key'
 
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
-login_manager.init_app(app)
 
 # Initialize DB and migrations
 db.init_app(app)
@@ -759,18 +756,17 @@ def admin_users():
     return render_template('admin_users.html', users=users)
 
 # Delete a user
-@app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+@app.route('/admin/users/delete/<int:user_id>', methods=['POST'])
+@login_required
 @admin_required
 def admin_delete_user(user_id):
     user = User.query.get_or_404(user_id)
-
     if user.id == current_user.id:
-        flash("You cannot delete your own account from admin.", "danger")
+        flash("You cannot delete your own account.", "warning")
         return redirect(url_for('admin_users'))
-
     db.session.delete(user)
     db.session.commit()
-    flash(f"User {user.username} deleted successfully.", "success")
+    flash(f"User {user.username} deleted.", "success")
     return redirect(url_for('admin_users'))
 
 # Verify a user
