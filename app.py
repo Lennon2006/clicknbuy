@@ -780,9 +780,6 @@ def admin_verify_user(user_id):
     flash(f"User {user.username} verified.", "success")
     return redirect(url_for('admin_users'))
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
 
 if __name__ == '__main__':
     start_background_threads()
