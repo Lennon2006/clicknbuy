@@ -9,12 +9,10 @@ from datetime import datetime, timedelta
 from threading import Thread
 import time
 from models import db, User, Ad, Image, Rating, ActivityLog, Conversation, Message
-from flask_login import login_required, current_user
 import json
 from sqlalchemy import or_, and_
 from flask_socketio import SocketIO, emit
-
-
+from flask_login import current_user
 
 
 
@@ -50,15 +48,13 @@ with app.app_context():
 
 # Decorator to restrict admin access
 def admin_required(f):
-    from functools import wraps
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin:
+        if not current_user.is_authenticated or not getattr(current_user, 'is_admin', False):
             flash("Admin access required.", "danger")
-            return redirect(url_for('auth.login'))
+            return redirect(url_for('login'))  # adjust if your login route is different
         return f(*args, **kwargs)
     return decorated_function
-
 
 # Helper functions
 
@@ -761,7 +757,7 @@ def admin_users():
 @admin_required
 def admin_delete_user(user_id):
     user = User.query.get_or_404(user_id)
-    if user.id == current_user.id:
+    if user.id == user.id:
         flash("You cannot delete your own account.", "warning")
         return redirect(url_for('admin_users'))
     db.session.delete(user)
