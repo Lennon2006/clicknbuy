@@ -18,7 +18,6 @@
     .tab-content > .tab-pane { padding: 1rem; border-radius: .5rem; box-shadow: 0 0 5px var(--shadow); }
     .btn-primary { background-color: var(--primary); border-color: var(--primary); }
     .btn-primary:hover { background-color: var(--primary-hover); }
-    /* Dark toggle styling */
     .dark-toggle { position: fixed; bottom: 20px; right: 20px; z-index: 999; background: var(--primary); color: white; border: none; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 1rem; box-shadow: 0 4px 8px rgba(0,0,0,0.3); cursor: pointer; }
     .dark-toggle:hover { background-color: var(--primary-hover); }
   </style>
@@ -42,9 +41,10 @@
   <div class="row g-3">
     <div class="col-12 col-md-4 text-center">
       <img
-        src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) if user.profile_pic else url_for('static', filename='images/logo.png') }}"
+        src="{{ user.profile_pic if user.profile_pic else 'https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg' }}"
         class="profile-pic mx-auto d-block mb-2"
-        alt="Profile"
+        alt="Profile picture of {{ user.username | e }}"
+        loading="lazy"
       />
       <h4 class="h5">{{ user.username }} {% if user.is_verified %}<i class="fas fa-check-circle text-primary"></i>{% endif %}</h4>
       <p class="small mb-2"><strong>Email:</strong> {{ user.email }}</p>

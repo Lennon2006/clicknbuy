@@ -44,9 +44,13 @@
         
         <!-- Profile Pic Preview -->
         <div class="text-center">
-          <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" alt="Profile Picture" class="profile-pic-preview mx-auto d-block" />
+         <img
+          src="{{ user.profile_pic or 'https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg' }}"
+          alt="Profile Picture"
+          class="profile-pic-preview mx-auto d-block"
+          loading="lazy"
+         />
         </div>
-
         <div class="mb-3">
           <label for="profile_pic" class="form-label">Change Profile Picture</label>
           <input type="file" class="form-control" id="profile_pic" name="profile_pic" accept="image/*" />

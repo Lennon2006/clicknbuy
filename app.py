@@ -19,9 +19,16 @@ import cloudinary
 import cloudinary.uploader
 from cloudinary.uploader import upload as cloudinary_upload
 from cloudinary.exceptions import Error as CloudinaryError
+from cloudinary.utils import cloudinary_url
 from sqlalchemy.orm import joinedload
 from sqlalchemy.pool import QueuePool
 import secrets
+
+
+
+
+
+
 
 
 
@@ -32,9 +39,11 @@ socketio = SocketIO(app, async_mode='threading')
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(16)
 
+
 load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+
 
 # Load categories once at startup
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -149,13 +158,18 @@ def shutdown_session(exception=None):
     db.session.remove()
 
 # Routes
+    
 @app.route('/')
 def home():
-    start = time.time()
-    unfeature_expired_ads()
-    latest_ads = Ad.query.options(joinedload(Ad.images)).order_by(Ad.id.desc()).limit(4).all()
-    print("Query time:", time.time() - start)
-    return render_template('home.html', latest_ads=latest_ads)
+    # Query the latest 12 ads, eager-load their images to avoid extra queries
+    latest_ads = Ad.query.options(joinedload(Ad.images)) \
+                         .order_by(Ad.id.desc()) \
+                         .limit(12).all()
+
+    # Pass current year for footer display
+    current_year = datetime.now().year
+
+    return render_template('home.html', latest_ads=latest_ads, current_year=current_year)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -256,58 +270,28 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for('home'))
 
-@app.route('/profile', methods=['GET', 'POST'])
+@app.route('/profile')
 @login_required
 def profile():
-    unfeature_expired_ads()
-    user = User.query.get_or_404(int(session['user_id']))
-    updated = False
- 
-    if request.method == 'POST':
-        # Handle Profile Picture Upload
-        file = request.files.get('profile_pic')
-        if file and allowed_file(file.filename):
-            if user.profile_pic and user.profile_pic != 'default-profile.png':
-                old_path = os.path.join(app.config['UPLOAD_FOLDER'], user.profile_pic)
-                if os.path.exists(old_path):
-                    try:
-                        os.remove(old_path)
-                    except Exception as e:
-                        print(f"Error deleting old profile pic: {e}")
+    user_id = session.get('user_id')
+    if not user_id:
+        flash("Please log in to view your profile.", "warning")
+        return redirect(url_for('login'))
 
-            filename = save_profile_pic(file)
-            if filename:
-                user.profile_pic = filename
-                updated = True
-            else:
-                flash("Failed to save profile picture.", "danger")
+    user = User.query.get(user_id)
+    if not user:
+        flash("User not found.", "danger")
+        return redirect(url_for('login'))
 
-        # Handle Bio Update
-        bio = request.form.get('bio', '').strip()
-        if bio != user.bio:
-            user.bio = bio
-            updated = True
-
-        # Commit changes if any
-        if updated:
-            try:
-                db.session.commit()
-                flash("Profile updated successfully.", "success")
-            except Exception as e:
-                db.session.rollback()
-                flash("Failed to update profile.", "danger")
-                print(f"DB commit error: {e}")
-        else:
-            flash("No changes detected.", "info")
-
-        return redirect(url_for('profile'))
-        
-
-    # On GET, load ratings and ads for display
+    # Load ratings where current user is reviewed
     user_ratings = Rating.query.filter_by(reviewed_id=user.id).order_by(Rating.timestamp.desc()).all()
-    ads = Ad.query.filter_by(user_id=user.id).order_by(Ad.id.desc()).all()
-    return render_template('profile.html', user=user, user_ratings=user_ratings, ads=ads)
 
+    # Load ads posted by the user
+    user_ads = Ad.query.filter_by(user_id=user.id).order_by(Ad.id.desc()).all()
+
+    return render_template('profile.html', user=user, user_ratings=user_ratings, user_ads=user_ads)
+
+#EDIT PROFILE
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
@@ -351,26 +335,23 @@ def edit_profile():
             user.set_password(password)
             updated = True
 
-        # Handle profile picture upload
+        # Handle profile picture upload with Cloudinary
         file = request.files.get('profile_pic')
         if file and allowed_file(file.filename):
-            # Remove old pic if not default
-            if user.profile_pic and user.profile_pic != 'default-profile.png':
-                old_path = os.path.join(app.config['UPLOAD_FOLDER'], user.profile_pic)
-                if os.path.exists(old_path):
-                    try:
-                        os.remove(old_path)
-                    except Exception as e:
-                        print(f"Error deleting old profile pic: {e}")
-
-            filename = save_profile_pic(file)
-            if filename:
-                user.profile_pic = filename
+            try:
+                # Upload to Cloudinary
+                result = cloudinary_upload(file, folder='clicknbuy/profile_pics', overwrite=True, resource_type="image")
+                # Save public_id or secure_url (choose what you prefer)
+                user.profile_pic = result.get('secure_url')  # store full URL
+                
+                # If you want to store just public_id for more control:
+                # user.profile_pic = result.get('public_id')
+                
                 updated = True
-            else:
-                flash("Failed to save profile picture.", "danger")
+            except Exception as e:
+                flash('Failed to upload profile picture.', 'danger')
+                print(f"Cloudinary upload error: {e}")
 
-        # Commit changes if anything updated
         if updated:
             try:
                 db.session.commit()
@@ -408,6 +389,8 @@ def verify_account():
 
     return redirect(url_for('profile'))
 
+
+
 @app.route('/ads')
 def show_ads():
     query = request.args.get('q', '').strip().lower()
@@ -428,6 +411,7 @@ def show_ads():
     ads = ads_query.all()
 
     return render_template('ads.html', ads=ads, categories=categories)
+
 
 @app.route('/post', methods=['GET', 'POST'])
 @login_required
@@ -498,6 +482,8 @@ def post_ad():
             flash("An error occurred while posting your ad.", "danger")
 
     return render_template('post.html', categories=categories)
+
+
 
 @app.route('/edit/<int:ad_id>', methods=['GET', 'POST'])
 @login_required
@@ -604,6 +590,7 @@ def ad_detail(ad_id):
 
     return render_template('ad_detail.html', ad=ad, seller_avg_rating=seller_avg_rating, ratings=ratings)
 
+
 @app.route('/messages/<int:conversation_id>', methods=['GET', 'POST'])
 @login_required
 def messages(conversation_id):
@@ -681,6 +668,7 @@ def start_background_threads():
     thread = Thread(target=unfeature_expired_ads, daemon=True)
     thread.start()
 
+
 #CONVOS
 @app.route('/conversation/<int:conversation_id>', methods=['GET', 'POST'])
 def conversation_detail(conversation_id):
@@ -751,6 +739,7 @@ def conversation_detail(conversation_id):
 
     return render_template('conversation_detail.html', conversation=conv, user_id=user_id)
 
+
 #SMS
 @app.route('/inbox')
 def inbox():
@@ -776,6 +765,7 @@ def inbox():
     return render_template('inbox.html', conversations=conv_with_unread)
 
 #/feature/<int:ad_id
+
 @app.route('/feature/<int:ad_id>', methods=['POST'])
 @login_required
 def feature_ad(ad_id):
@@ -806,6 +796,7 @@ def feature_ad(ad_id):
 
     return redirect(url_for('ad_detail', ad_id=ad.id))
 
+
 #Terms and about
 @app.route('/about')
 def about():
@@ -819,6 +810,7 @@ def terms():
 @socketio.on('typing')
 def handle_typing(data):
     emit('show_typing', data, broadcast=True)
+
 
 # Show all users
 @app.route('/admin/users')

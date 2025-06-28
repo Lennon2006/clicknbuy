@@ -11,7 +11,6 @@
       margin: 5px;
       border-radius: 6px;
       object-fit: cover;
-      position: relative;
     }
     .image-wrapper {
       position: relative;
@@ -82,17 +81,12 @@
       <input type="text" class="form-control" id="location" name="location" value="{{ ad.location }}">
     </div>
 
-    <!-- Sold Out checkbox -->
-    <div class="mb-3 form-check">
-      <input type="checkbox" class="form-check-input" id="is_sold" name="is_sold" {% if ad.is_sold %}checked{% endif %}>
-      <label class="form-check-label" for="is_sold">Mark as Sold Out</label>
-    </div>
-
+    
     <div class="mb-3">
       <label class="form-label">Existing Images (Check to delete)</label><br />
       {% for img in ad.images %}
         <div class="image-wrapper">
-          <img src="{{ url_for('static', filename='uploads/' ~ img.filename) }}" alt="Ad Image" class="existing-image" />
+          <img src="{{ img.url }}" alt="Ad Image" class="existing-image" />
           <input type="checkbox" name="delete_images" value="{{ img.id }}" class="delete-checkbox" title="Check to delete this image" />
         </div>
       {% endfor %}

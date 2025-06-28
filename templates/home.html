@@ -15,6 +15,7 @@
       --primary: #0d6efd;
       --primary-hover: #084cd9;
       --shadow: rgba(0, 0, 0, 0.1);
+      --icon-color: var(--primary);
     }
     [data-theme='dark'] {
       --bg: #121212;
@@ -23,16 +24,19 @@
       --primary: #4a90e2;
       --primary-hover: #3578e5;
       --shadow: rgba(0, 0, 0, 0.6);
+      --icon-color: #8ab4f8;
     }
     body {
       background: var(--bg);
       color: var(--text);
       font-family: 'Poppins', sans-serif;
       scroll-behavior: smooth;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
-    .navbar, .card, .footer, .hero {
+    .navbar, .card, footer, .hero {
       background: var(--card);
       color: var(--text);
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
     .navbar-brand {
       position: relative;
@@ -77,6 +81,7 @@
     .btn-primary {
       background-color: var(--primary);
       border-color: var(--primary);
+      transition: background-color 0.3s ease, border-color 0.3s ease;
     }
     .btn-primary:hover, .btn-primary:focus {
       background-color: var(--primary-hover);
@@ -86,6 +91,7 @@
     .btn-outline-light {
       border-color: white;
       color: white;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
     .btn-outline-light:hover, .btn-outline-light:focus {
       background-color: white;
@@ -101,13 +107,34 @@
       transform: scale(1.05) translateY(-5px);
       box-shadow: 0 12px 25px var(--shadow);
     }
-    .category-card .card-body i {
-      font-size: 2.4rem;
-      color: var(--primary);
+
+    /* Replace icons with images */
+    .category-card img.category-icon {
+      width: 80px; /* increase to 100px or more if you want it bigger */
+      height: 80px;
+      object-fit: cover;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px var(--shadow);
+      transition: transform 0.3s ease;
     }
-    .category-card:hover .card-body i {
-      color: var(--primary-hover);
+    .category-card:hover img.category-icon {
+      transform: scale(1.1);
+      box-shadow: 0 8px 16px var(--shadow);
     }
+    .featured-category-card img.category-icon {
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 15%;
+      margin-bottom: 1rem;
+      box-shadow: 0 3px 8px var(--shadow);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .featured-category-card:hover img.category-icon {
+      transform: scale(1.1);
+      box-shadow: 0 12px 25px var(--shadow);
+    }
+
     .dark-toggle {
       position: fixed;
       bottom: 20px;
@@ -125,18 +152,18 @@
       font-size: 1.2rem;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
       cursor: pointer;
+      transition: background-color 0.3s ease;
     }
     .dark-toggle:hover {
       background-color: var(--primary-hover);
     }
     footer {
       padding: 1.5rem 0;
-      background: var(--card);
-      color: var(--text);
       font-size: 0.9rem;
     }
     footer a {
       color: var(--primary);
+      transition: color 0.3s ease;
     }
     footer a:hover {
       color: var(--primary-hover);
@@ -152,11 +179,29 @@
     }
     .social-icons a {
       color: var(--primary);
-      margin: 0 0.5rem;
-      font-size: 1.25rem;
+      margin: 0 0.75rem;
+      font-size: 1.5rem;
+      transition: color 0.3s ease;
     }
     .social-icons a:hover {
       color: var(--primary-hover);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 767.98px) {
+      .hero h1 {
+        font-size: 2.2rem;
+      }
+      .hero p {
+        font-size: 1rem;
+      }
+      .btn-lg {
+        font-size: 1rem;
+        padding: 0.5rem 1.25rem;
+      }
+      footer {
+        font-size: 0.8rem;
+      }
     }
   </style>
 </head>
@@ -164,7 +209,7 @@
   <nav class="navbar navbar-expand-lg navbar-light shadow-sm">
     <div class="container">
       <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
@@ -202,20 +247,20 @@
     <h2 class="text-center section-title">Shop by Category</h2>
     <div class="row text-center">
       {% set categories = [
-        {'name': 'Phones', 'icon': 'fa-mobile-alt'},
-        {'name': 'Cars', 'icon': 'fa-car'},
-        {'name': 'Electronics', 'icon': 'fa-tv'},
-        {'name': 'Furniture', 'icon': 'fa-couch'},
-        {'name': 'Clothing', 'icon': 'fa-tshirt'},
-        {'name': 'Kitchen', 'icon': 'fa-blender'}
+        {'name': 'Phones', 'img_url': 'https://static.businessworld.in/IMG_0141_20240928093534_original_image_21.webp'},
+        {'name': 'Cars', 'img_url': 'https://img.sm360.ca/images/article/humberviewgroup-941/114236//410908_2021_mercedes-benz_gle-class1684437019338.jpg'},
+        {'name': 'Electronics', 'img_url': 'https://static.cybertron.com/clx/home/pcs-laps-section/custom-gaming-pcs.jpg'},
+        {'name': 'Furniture', 'img_url': 'https://media.designcafe.com/wp-content/uploads/2023/07/05120637/modern-furniture-designs.jpg'},
+        {'name': 'Clothing', 'img_url': 'https://originalluxury.ca/cdn/shop/articles/top-mens-luxury-clothes.jpg?v=1681720926&width=1024'},
+        {'name': 'Kitchen', 'img_url': 'https://media.istockphoto.com/id/476392316/photo/kitchen-utensil.jpg?s=612x612&w=0&k=20&c=Mb2d_7WGJP6N5Jb__soAl74ZUhFwH47iSdJtXeoW47o='}
       ] %}
       {% for cat in categories %}
         <div class="col-6 col-md-4 col-lg-2 mb-4">
-          <a href="{{ url_for('show_ads', category=cat.name) }}" class="text-decoration-none">
-            <div class="card category-card py-4">
-              <div class="card-body">
-                <i class="fas {{ cat.icon }} mb-2"></i>
-                <h6 class="card-title">{{ cat.name }}</h6>
+          <a href="{{ url_for('show_ads', category=cat.name) }}" class="text-decoration-none" aria-label="Browse {{ cat.name }} category">
+            <div class="card category-card py-4 h-100 d-flex flex-column justify-content-center align-items-center">
+              <div class="card-body d-flex flex-column align-items-center p-0">
+                <img src="{{ cat.img_url }}" alt="{{ cat.name }} icon" class="category-icon" loading="lazy" />
+                <h6 class="card-title mb-0">{{ cat.name }}</h6>
               </div>
             </div>
           </a>
@@ -225,43 +270,78 @@
   </div>
 
   <div class="container my-5">
-    <h2 class="text-center section-title">Latest Ads</h2>
-    <div class="row">
-      {% for ad in latest_ads %}
+    <h2 class="text-center section-title">Featured Categories</h2>
+    <div class="row text-center">
+      {% set featured_categories = [
+        {'name': 'Phones', 'img_url': 'https://static.businessworld.in/IMG_0141_20240928093534_original_image_21.webp', 'desc': 'Latest smartphones and accessories.'},
+        {'name': 'Cars', 'img_url': 'https://img.sm360.ca/images/article/humberviewgroup-941/114236//410908_2021_mercedes-benz_gle-class1684437019338.jpg', 'desc': 'New and used vehicles.'},
+        {'name': 'Electronics', 'img_url': 'https://static.cybertron.com/clx/home/pcs-laps-section/custom-gaming-pcs.jpg', 'desc': 'TVs, Consoles, and more.'},
+        {'name': 'Furniture', 'img_url': 'https://media.designcafe.com/wp-content/uploads/2023/07/05120637/modern-furniture-designs.jpg', 'desc': 'Home and office furniture.'}
+      ] %}
+      {% for cat in featured_categories %}
         <div class="col-md-3 mb-4">
-          <div class="card ad-card">
-            {% if ad.images %}
-              {% set transformed_url = ad.images[0].url.replace("/upload/", "/upload/c_fill,w_400,h_300,q_auto,f_auto/") %}
-              <img src="{{ transformed_url }}" class="card-img-top" alt="Ad Image" loading="lazy" />
-            {% else %}
-              <img src="https://via.placeholder.com/400x300?text=No+Image" class="card-img-top" alt="No Image" />
-            {% endif %}
-            <div class="card-body">
-              <h5 class="card-title">{{ ad.title }}</h5>
-              <p class="card-text text-primary fw-bold">N${{ ad.price }}</p>
-              <a href="{{ url_for('ad_detail', ad_id=ad.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+          <a href="{{ url_for('show_ads', category=cat.name) }}" class="text-decoration-none featured-category-card" aria-label="Browse featured {{ cat.name }} category">
+            <div class="card category-card py-4 h-100 d-flex flex-column justify-content-center align-items-center">
+              <div class="card-body text-center">
+                <img src="{{ cat.img_url }}" alt="{{ cat.name }} icon" class="category-icon" loading="lazy" />
+                <h5 class="card-title mt-3">{{ cat.name }}</h5>
+                <p class="card-text text-muted">{{ cat.desc }}</p>
+              </div>
             </div>
-          </div>
+          </a>
         </div>
       {% endfor %}
     </div>
   </div>
 
+  <div class="container my-5">
+    <h2 class="text-center section-title">How It Works</h2>
+    <div class="row text-center">
+      <div class="col-md-4 mb-4">
+        <div class="card py-4 category-card h-100 d-flex flex-column justify-content-center align-items-center">
+          <div class="card-body text-center">
+            <i class="fas fa-user-plus mb-3" style="font-size: 3rem; color: var(--primary);" aria-hidden="true"></i>
+            <h5>Create an Account</h5>
+            <p>Sign up quickly and easily to start buying or selling.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-4">
+        <div class="card py-4 category-card h-100 d-flex flex-column justify-content-center align-items-center">
+          <div class="card-body text-center">
+            <i class="fas fa-upload mb-3" style="font-size: 3rem; color: var(--primary);" aria-hidden="true"></i>
+            <h5>Post Your Ad</h5>
+            <p>List your items with photos and descriptions.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-4">
+        <div class="card py-4 category-card h-100 d-flex flex-column justify-content-center align-items-center">
+          <div class="card-body text-center">
+            <i class="fas fa-shopping-cart mb-3" style="font-size: 3rem; color: var(--primary);" aria-hidden="true"></i>
+            <h5>Buy or Sell</h5>
+            <p>Connect with buyers or sellers and make a deal.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <footer class="text-center">
     <div class="container">
-      <p class="mb-0">© {{ current_year or now().year }} Click N Buy. All rights reserved.</p>
+      <p class="mb-0">© {{ current_year }} Click N Buy. All rights reserved.</p>
       <small>
         <a href="{{ url_for('about') }}" class="text-decoration-none">About Us</a> |
         <a href="{{ url_for('terms') }}" class="text-decoration-none">Terms</a>
       </small>
       <div class="d-flex gap-3 justify-content-center mt-4 social-icons">
-        <a href="https://x.com/clicknbuyna" target="_blank"><i class="fab fa-x-twitter fa-2x"></i></a>
-        <a href="https://www.instagram.com/clicknbuy.na" target="_blank"><i class="fab fa-instagram fa-2x"></i></a>
+        <a href="https://x.com/clicknbuyna" target="_blank" rel="noopener noreferrer" aria-label="X Twitter"><i class="fab fa-x-twitter"></i></a>
+        <a href="https://www.instagram.com/clicknbuy.na" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
       </div>
     </div>
   </footer>
 
-  <button class="dark-toggle" id="toggleTheme" title="Toggle dark mode">
+  <button class="dark-toggle" id="toggleTheme" title="Toggle dark mode" aria-label="Toggle dark mode">
     <i class="fas fa-moon"></i>
   </button>
 
@@ -271,6 +351,10 @@
     const html = document.documentElement;
     const saved = localStorage.getItem('theme');
     if (saved) html.setAttribute('data-theme', saved);
+    themeBtn.innerHTML = saved === 'dark'
+      ? '<i class="fas fa-sun"></i>'
+      : '<i class="fas fa-moon"></i>';
+
     themeBtn.addEventListener('click', () => {
       const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       html.setAttribute('data-theme', newTheme);

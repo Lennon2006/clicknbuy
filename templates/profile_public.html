@@ -52,7 +52,7 @@
 
 <div class="container my-5">
   <div class="text-center mb-4">
-    <img src="{{ url_for('static', filename='uploads/' ~ user.profile_pic) }}" alt="Profile picture" class="profile-pic mb-3" />
+    <img src="{{ user.profile_pic or url_for('static', filename='images/default-profile.png') }}" alt="Profile picture" class="profile-pic mb-3" />
     <h2>{{ user.username }}</h2>
 
     <div class="user-bio">
@@ -75,7 +75,7 @@
         <div class="col-sm-6 col-md-4 col-lg-3">
           <div class="card h-100">
             {% if ad.images %}
-              <img src="{{ url_for('static', filename='uploads/' ~ ad.images[0].filename) }}" class="card-img-top" alt="Ad image">
+              <img src="{{ ad.images[0].url }}" class="card-img-top" alt="Ad image">
             {% else %}
               <img src="{{ url_for('static', filename='images/default-ad.jpg') }}" class="card-img-top" alt="Default image">
             {% endif %}

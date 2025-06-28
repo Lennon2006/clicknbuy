@@ -1,6 +1,6 @@
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
-
+from sqlalchemy.sql import func
 
 
 
@@ -89,6 +89,7 @@ class Ad(db.Model):
 
     # Timestamps
     created_at = db.Column(db.DateTime, index=True)
+    cdtimestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
     images = db.relationship('Image', backref='ad', lazy=True, cascade="all, delete-orphan")
