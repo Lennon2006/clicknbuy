@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, abort
 from flask_migrate import Migrate
+import requests
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
@@ -13,13 +14,27 @@ import json
 from sqlalchemy import or_, and_
 from flask_socketio import SocketIO, emit
 from flask_login import current_user
+from dotenv import load_dotenv
+import cloudinary
+import cloudinary.uploader
+from cloudinary.uploader import upload as cloudinary_upload
+from cloudinary.exceptions import Error as CloudinaryError
+from sqlalchemy.orm import joinedload
+from sqlalchemy.pool import QueuePool
+import secrets
 
 
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode='threading')
+
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(16)
+
+load_dotenv()
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 
 # Load categories once at startup
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -31,20 +46,22 @@ UPLOAD_FOLDER = os.path.join(basedir, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'ads.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = os.environ.get('SECRET_KEY') or 'replace_with_a_strong_random_secret_key'
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'poolclass': QueuePool,
+    'pool_size': 5,            # Max connections in the pool
+    'max_overflow': 10,        # Max overflow connections
+    'pool_timeout': 30,        # Wait time before throwing error
+    'pool_recycle': 1800     # Recycle stale connections (recommended for long-running apps)
+}
 
-
-# Initialize DB and migrations
 db.init_app(app)
 migrate = Migrate(app, db)
 
 with app.app_context():
     db.create_all()
     print("Total users:", User.query.count())
-
 
 # Decorator to restrict admin access
 def admin_required(f):
@@ -60,6 +77,7 @@ def admin_required(f):
 
 
 def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def login_required(f):
@@ -106,29 +124,37 @@ def log_activity(user_id, action):
     db.session.commit()
 
 def unfeature_expired_ads():
-    expired_ads = Ad.query.filter(
-        Ad.is_featured == True,
-        Ad.feature_expiry != None,
-        Ad.feature_expiry < datetime.utcnow()
-    ).all()
+    with app.app_context():
+        while True:
+            expired_ads = Ad.query.filter(
+                Ad.is_featured == True,
+                Ad.feature_expiry < datetime.utcnow()
+            ).all()
 
-    for ad in expired_ads:
-        ad.is_featured = False
-        ad.feature_expiry = None
+            for ad in expired_ads:
+                ad.is_featured = False
+                ad.feature_expiry = None
+            if expired_ads:
+                db.session.commit()
 
-    if expired_ads:
-        try:
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            print(f"Unfeature error: {e}")
+            time.sleep(60 * 10)  # check every 10 minutes
+
+def start_background_threads():
+    thread = Thread(target=unfeature_expired_ads)
+    thread.daemon = True
+    thread.start()
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    db.session.remove()
 
 # Routes
-
 @app.route('/')
 def home():
-    unfeature_expired_ads()  # ✅ cleanup expired featured ads
-    latest_ads = Ad.query.order_by(Ad.id.desc()).limit(4).all()
+    start = time.time()
+    unfeature_expired_ads()
+    latest_ads = Ad.query.options(joinedload(Ad.images)).order_by(Ad.id.desc()).limit(4).all()
+    print("Query time:", time.time() - start)
     return render_template('home.html', latest_ads=latest_ads)
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -181,6 +207,48 @@ def login():
             return redirect(url_for('login'))
 
     return render_template('login.html')
+
+
+@app.route('/google-login/callback', methods=['POST'])
+def google_login_callback():
+    try:
+        # Ensure proper content type and safely extract token
+        if request.is_json:
+            token = request.get_json().get("credential")
+        else:
+            token = request.form.get("credential")
+
+        if not token:
+            return "Missing token", 400
+
+        # Verify token with Google
+        response = requests.get(f"https://oauth2.googleapis.com/tokeninfo?id_token={token}")
+        if response.status_code != 200:
+            return "Invalid token", 400
+
+        data = response.json()
+        email = data.get("email")
+        name = data.get("name") or "GoogleUser"
+
+        if not email:
+            return "Email not found in token", 400
+
+        # Check if user exists
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            user = User(username=name, email=email)
+            db.session.add(user)
+            db.session.commit()
+
+        # Log the user in
+        session['user_id'] = user.id
+        session['username'] = user.username
+        flash("Signed in with Google!", "success")
+        return redirect(url_for('home'))
+
+    except Exception as e:
+        print(f"Google login error: {e}")
+        return "Something went wrong during Google Sign-In", 500
 
 @app.route('/logout')
 def logout():
@@ -319,7 +387,6 @@ def edit_profile():
     # GET request - render edit form
     return render_template('edit_profile.html', user=user)
 
-
 @app.route('/verify_account', methods=['POST'])
 @login_required
 def verify_account():
@@ -341,27 +408,26 @@ def verify_account():
 
     return redirect(url_for('profile'))
 
-
-
 @app.route('/ads')
 def show_ads():
     query = request.args.get('q', '').strip().lower()
     selected_category = request.args.get('category', '')
 
-    ads = Ad.query
+    ads_query = Ad.query.options(joinedload(Ad.images))
 
     if query:
-        ads = ads.filter(
+        ads_query = ads_query.filter(
             (Ad.title.ilike(f"%{query}%")) |
             (Ad.description.ilike(f"%{query}%"))
         )
     if selected_category:
-        ads = ads.filter_by(category=selected_category)
+        ads_query = ads_query.filter_by(category=selected_category)
 
-    ads = ads.order_by(Ad.is_featured.desc(), Ad.created_at.desc())
+    ads_query = ads_query.order_by(Ad.is_featured.desc(), Ad.created_at.desc())
 
-    # Pass the categories loaded from JSON
-    return render_template('ads.html', ads=ads.all(), categories=categories)
+    ads = ads_query.all()
+
+    return render_template('ads.html', ads=ads, categories=categories)
 
 @app.route('/post', methods=['GET', 'POST'])
 @login_required
@@ -377,15 +443,18 @@ def post_ad():
         location = request.form.get('location')
         user_id = int(session['user_id'])
 
+        # Validate required fields
         if not all([title, description, price, category, post_type, contact]):
-            flash("Please fill out all required fields, including post type.", "danger")
+            flash("Please fill out all required fields.", "danger")
             return redirect(url_for('post_ad'))
 
+        # Create new ad entry
         new_ad = Ad(
             title=title,
             description=description,
             price=price,
             category=category,
+            subcategory=subcategory,
             post_type=post_type,
             contact=contact,
             location=location,
@@ -397,24 +466,36 @@ def post_ad():
             db.session.add(new_ad)
             db.session.commit()
 
+            # Handle images
             images = request.files.getlist('images')
+            if len(images) > 10:
+                flash("You can upload a maximum of 10 images.", "warning")
+                return redirect(url_for('post_ad'))
+
             for image in images:
                 if image and allowed_file(image.filename):
-                    filename = secure_filename(image.filename)
-                    unique_name = f"user_{user_id}_{uuid.uuid4().hex}_{filename}"
-                    path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
-                    image.save(path)
-                    db.session.add(Image(filename=unique_name, ad_id=new_ad.id))
+                    try:
+                        upload_result = cloudinary.uploader.upload(
+                            image,
+                            folder="clicknbuy_ads"
+                        )
+                        secure_url = upload_result.get("secure_url")
+                        if secure_url:
+                            new_image = Image(url=secure_url, ad_id=new_ad.id)
+                            db.session.add(new_image)
+                    except CloudinaryError as e:
+                        print(f"Cloudinary error: {e}")
+                        flash("One or more images failed to upload.", "warning")
 
             db.session.commit()
             log_activity(user_id, "Posted an ad")
-            flash("Ad posted successfully.", "success")
+            flash("Ad posted successfully!", "success")
             return redirect(url_for('show_ads'))
 
         except Exception as e:
             db.session.rollback()
-            flash("Something went wrong while posting your ad.", "danger")
             print(f"Error posting ad: {e}")
+            flash("An error occurred while posting your ad.", "danger")
 
     return render_template('post.html', categories=categories)
 
@@ -479,7 +560,8 @@ def delete_ad(ad_id):
 
 @app.route('/ads/<int:ad_id>', methods=['GET', 'POST'])
 def ad_detail(ad_id):
-    ad = Ad.query.get_or_404(ad_id)
+    # Eager load images with ad, so ad.images works without extra queries
+    ad = Ad.query.options(db.joinedload(Ad.images)).get_or_404(ad_id)
     user_id = session.get('user_id')
 
     seller = User.query.get(ad.user_id)
@@ -599,7 +681,6 @@ def start_background_threads():
     thread = Thread(target=unfeature_expired_ads, daemon=True)
     thread.start()
 
-
 #CONVOS
 @app.route('/conversation/<int:conversation_id>', methods=['GET', 'POST'])
 def conversation_detail(conversation_id):
@@ -670,7 +751,6 @@ def conversation_detail(conversation_id):
 
     return render_template('conversation_detail.html', conversation=conv, user_id=user_id)
 
-
 #SMS
 @app.route('/inbox')
 def inbox():
@@ -699,7 +779,7 @@ def inbox():
 @app.route('/feature/<int:ad_id>', methods=['POST'])
 @login_required
 def feature_ad(ad_id):
-    ad = Ad.query.get_or_404(ad_id)
+    ad = Ad.query.options(joinedload(Ad.images)).get_or_404(ad_id)
 
     if ad.user_id != int(session['user_id']):
         flash("You are not authorized to feature this ad.", "danger")
@@ -713,7 +793,6 @@ def feature_ad(ad_id):
         flash("This ad is already featured.", "info")
         return redirect(url_for('ad_detail', ad_id=ad.id))
 
-    # Skip payment, instantly feature ad
     ad.is_featured = True
     ad.feature_expiry = datetime.utcnow() + timedelta(days=7)
 
@@ -722,11 +801,10 @@ def feature_ad(ad_id):
         flash("Your ad is now featured for 7 days! (Free for now)", "success")
     except Exception as e:
         db.session.rollback()
-        flash("Failed to feature your ad. Please try again.", "danger")
         print(f"Feature error: {e}")
+        flash("Failed to feature your ad. Please try again.", "danger")
 
     return redirect(url_for('ad_detail', ad_id=ad.id))
-
 
 #Terms and about
 @app.route('/about')
@@ -741,7 +819,6 @@ def terms():
 @socketio.on('typing')
 def handle_typing(data):
     emit('show_typing', data, broadcast=True)
-
 
 # Show all users
 @app.route('/admin/users')

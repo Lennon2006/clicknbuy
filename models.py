@@ -11,13 +11,13 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(128), nullable=True)  # changed from nullable=False
+    auth_provider = db.Column(db.String(50), default='local')  # NEW FIELD
     profile_pic = db.Column(db.String(255), nullable=False, default='default-profile.png')
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_verified = db.Column(db.Boolean, default=False)
     bio = db.Column(db.Text, nullable=True, default="")
-    profile_pic = db.Column(db.String(255), nullable=False, default='default-profile.png')
 
     ads = db.relationship('Ad', backref='owner', lazy=True)
 
@@ -84,11 +84,11 @@ class Ad(db.Model):
     # Status flags
     is_sold = db.Column(db.Boolean, default=False)
     is_paid = db.Column(db.Boolean, default=False)  # For future paid/boosted ad features
-    is_featured = db.Column(db.Boolean, default=False)
+    is_featured = db.Column(db.Boolean, default=False, index=True)
     feature_expiry = db.Column(db.DateTime, nullable=True)
 
     # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, index=True)
 
     # Relationships
     images = db.relationship('Image', backref='ad', lazy=True, cascade="all, delete-orphan")
@@ -102,7 +102,8 @@ class Ad(db.Model):
 # ------------------ IMAGE MODEL ------------------ #
 class Image(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    filename = db.Column(db.String(100), nullable=False)
+    filename = db.Column(db.String(255))  # optional, you can keep it
+    url = db.Column(db.String(500))       # <--- Add this for Cloudinary
     ad_id = db.Column(db.Integer, db.ForeignKey('ad.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

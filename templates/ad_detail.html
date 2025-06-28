@@ -5,7 +5,7 @@
   <title>{{ ad.title }} - Click N Buy</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
   <style>
     :root {
       --bg: #ffffff;
@@ -17,17 +17,14 @@
       --text: #f0f0f0;
       --card: #1e1e1e;
     }
-
     body {
       background: var(--bg);
       color: var(--text);
     }
-
     .navbar, .card, .bg-white {
       background: var(--card) !important;
       color: var(--text);
     }
-
     .ad-images img {
       max-width: 100%;
       max-height: 200px;
@@ -36,7 +33,6 @@
       object-fit: cover;
       cursor: pointer;
     }
-
     .badge-sold {
       background-color: #dc3545;
       color: white;
@@ -45,13 +41,11 @@
       border-radius: 0.375rem;
       margin-left: 1rem;
     }
-
     .seller-info {
       display: flex;
       align-items: center;
       gap: 0.75rem;
     }
-
     .seller-pic {
       width: 48px;
       height: 48px;
@@ -59,20 +53,17 @@
       object-fit: cover;
       border: 2px solid #198754;
     }
-
     .star-rating {
       color: #ffc107;
       font-size: 1.1rem;
       line-height: 1;
     }
-
     .verified-badge {
       font-size: 1.3rem;
       color: #0d6efd;
       margin-left: 0.4rem;
       vertical-align: middle;
     }
-
     .dark-toggle {
       position: fixed;
       bottom: 20px;
@@ -92,26 +83,12 @@
       cursor: pointer;
       transition: background-color 0.3s ease;
     }
-
     .dark-toggle:hover {
       background-color: #084cd9;
     }
-
     [data-theme='dark'] .modal-content {
       background-color: #1e1e1e;
       color: #f0f0f0;
-    }
-
-    [data-theme='dark'] .form-control,
-    [data-theme='dark'] .form-select,
-    [data-theme='dark'] textarea {
-      background: #2a2a2a;
-      color: var(--text);
-      border-color: #555;
-    }
-
-    [data-theme='dark'] .form-control::placeholder {
-      color: #bbb;
     }
   </style>
 </head>
@@ -120,7 +97,7 @@
 <nav class="navbar navbar-expand-lg navbar-light shadow-sm">
   <div class="container">
     <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu" aria-controls="offcanvasMenu">
+    <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse d-none d-lg-flex justify-content-end" id="navbarNav">
@@ -138,7 +115,7 @@
   </div>
 </nav>
 
-<div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasMenu">
+<div class="offcanvas offcanvas-start" id="offcanvasMenu">
   <div class="offcanvas-header">
     <h5 class="offcanvas-title">Menu</h5>
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
@@ -175,22 +152,22 @@
 
         <div class="mt-4 ad-images d-flex flex-wrap">
           {% for image in ad.images %}
-            <img src="{{ url_for('static', filename='uploads/' ~ image.filename) }}" alt="Ad image {{ loop.index }}" class="me-2 mb-2 rounded" data-bs-toggle="modal" data-bs-target="#imageModal" data-bs-slide-to="{{ loop.index0 }}" role="button" tabindex="0" />
+            <img src="{{ image.url or url_for('static', filename='uploads/' ~ image.filename) }}"
+                 alt="Ad image {{ loop.index }}"
+                 class="me-2 mb-2 rounded"
+                 data-bs-toggle="modal"
+                 data-bs-target="#imageModal"
+                 data-bs-slide-to="{{ loop.index0 }}"
+                 role="button" />
           {% endfor %}
         </div>
       </div>
 
       <div class="col-lg-5 mt-4 mt-lg-0">
         <div class="seller-info mb-3">
-          {% if ad.owner.profile_pic %}
-            <a href="{{ url_for('profile_public', username=ad.owner.username) }}">
-              <img src="{{ url_for('static', filename='uploads/' ~ ad.owner.profile_pic) }}" alt="Seller" class="seller-pic" />
-            </a>
-          {% else %}
-            <a href="{{ url_for('profile_public', username=ad.owner.username) }}">
-              <img src="{{ url_for('static', filename='images/default-profile.png') }}" alt="Default" class="seller-pic" />
-            </a>
-          {% endif %}
+          <a href="{{ url_for('profile_public', username=ad.owner.username) }}">
+            <img src="{% if ad.owner.profile_pic %}{{ url_for('static', filename='uploads/' ~ ad.owner.profile_pic) }}{% else %}{{ url_for('static', filename='images/default-profile.png') }}{% endif %}" class="seller-pic" />
+          </a>
           <div>
             <h5 class="mb-0 d-flex align-items-center">
               <a href="{{ url_for('profile_public', username=ad.owner.username) }}" class="text-decoration-none text-dark">
@@ -221,29 +198,28 @@
 
         {% if session.get('user_id') == ad.user_id and not ad.is_featured and not ad.is_sold %}
           <form action="{{ url_for('feature_ad', ad_id=ad.id) }}" method="POST" class="mt-3">
-            <button class="btn btn-warning w-100">🌟 Feature this Ad for 7 days for free!</button>
+            <button class="btn btn-warning w-100">🌟 Feature this Ad</button>
           </form>
         {% elif session.get('user_id') == ad.user_id and ad.is_featured %}
           <div class="alert alert-success mt-3 text-center">
-            Your ad is currently <strong>featured</strong><br>
-            Expires: <strong>{{ ad.feature_expiry.strftime('%Y-%m-%d') if ad.feature_expiry }}</strong>
+            This ad is featured until <strong>{{ ad.feature_expiry.strftime('%Y-%m-%d') }}</strong>
           </div>
         {% endif %}
       </div>
     </div>
 
-    <hr class="my-4">
+    <hr class="my-4" />
     <section>
       <h4 class="mb-3">Reviews</h4>
       {% if ratings %}
         <ul class="list-group">
           {% for rating in ratings %}
             <li class="list-group-item">
-              <strong>{{ rating.reviewer.username }}</strong> rated it <strong>{{ rating.stars }}/5</strong> ⭐
+              <strong>{{ rating.reviewer.username }}</strong> rated it <strong>{{ rating.stars }}/5</strong>
               {% if rating.comment %}
                 <div class="mt-2 text-muted">"{{ rating.comment }}"</div>
               {% endif %}
-              <small class="d-block mt-1 text-secondary">{{ rating.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+              <small class="d-block text-muted">{{ rating.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
             </li>
           {% endfor %}
         </ul>
@@ -253,7 +229,7 @@
     </section>
 
     {% if session.get('user_id') and session.get('user_id') != ad.user_id and not ad.is_sold %}
-      <hr class="my-4">
+      <hr class="my-4" />
       <section>
         <h4>Leave a Review</h4>
         <form method="POST" action="{{ url_for('ad_detail', ad_id=ad.id) }}">
@@ -268,19 +244,19 @@
           </div>
           <div class="mb-3">
             <label for="comment" class="form-label">Comment (optional)</label>
-            <textarea name="comment" id="comment" rows="3" class="form-control" maxlength="500"></textarea>
+            <textarea name="comment" id="comment" class="form-control" rows="3" maxlength="500"></textarea>
           </div>
           <button type="submit" class="btn btn-primary">Submit Review</button>
         </form>
       </section>
     {% elif ad.is_sold %}
-      <div class="alert alert-danger mt-4"><strong>This product has been sold and is no longer available.</strong></div>
+      <div class="alert alert-danger mt-4"><strong>This product has been sold.</strong></div>
     {% endif %}
   </div>
 </div>
 
-<!-- Image Modal -->
-<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+<!-- Image Modal Carousel -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-lg">
     <div class="modal-content">
       <div class="modal-header border-0">
@@ -291,17 +267,17 @@
           <div class="carousel-inner">
             {% for image in ad.images %}
               <div class="carousel-item {% if loop.first %}active{% endif %}">
-                <img src="{{ url_for('static', filename='uploads/' ~ image.filename) }}" class="d-block w-100 rounded" alt="Ad image {{ loop.index }}">
+                <img src="{{ image.url or url_for('static', filename='uploads/' ~ image.filename) }}"
+                     class="d-block w-100 rounded"
+                     alt="Ad image {{ loop.index }}" />
               </div>
             {% endfor %}
           </div>
           <button class="carousel-control-prev" type="button" data-bs-target="#carouselIndicators" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Previous</span>
+            <span class="carousel-control-prev-icon"></span>
           </button>
           <button class="carousel-control-next" type="button" data-bs-target="#carouselIndicators" data-bs-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Next</span>
+            <span class="carousel-control-next-icon"></span>
           </button>
         </div>
       </div>
@@ -318,39 +294,28 @@
 <script>
   const themeBtn = document.getElementById('toggleTheme');
   const html = document.documentElement;
-  const saved = localStorage.getItem('theme');
-  if (saved) {
-    html.setAttribute('data-theme', saved);
-    themeBtn.innerHTML = saved === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme) {
+    html.setAttribute('data-theme', savedTheme);
+    themeBtn.innerHTML = savedTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
   }
   themeBtn.addEventListener('click', () => {
-    const newTheme = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
     html.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
     themeBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
   });
 
-  // Modal image logic
-  var imageModal = document.getElementById('imageModal');
-  var carousel = document.getElementById('carouselIndicators');
-
-  // Initialize carousel with no auto-slide
-  var bsCarousel = bootstrap.Carousel.getInstance(carousel);
-  if (!bsCarousel) {
-    bsCarousel = new bootstrap.Carousel(carousel, {
-      interval: false,
-      ride: false
-    });
-  }
-
-  document.querySelectorAll('.ad-images img').forEach(function(img) {
-    img.addEventListener('click', function() {
-      var slideTo = parseInt(this.getAttribute('data-bs-slide-to'));
-      bsCarousel.to(slideTo);
-      var modal = new bootstrap.Modal(imageModal);
-      modal.show();
+  // Image modal carousel logic
+  const carousel = bootstrap.Carousel.getOrCreateInstance(document.getElementById('carouselIndicators'), { interval: false });
+  document.querySelectorAll('.ad-images img').forEach(img => {
+    img.addEventListener('click', () => {
+      const index = parseInt(img.getAttribute('data-bs-slide-to'));
+      carousel.to(index);
     });
   });
 </script>
+
 </body>
 </html>
