@@ -1,21 +1,122 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Inbox - Click N Buy</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-</head>
-<body class="bg-light">
+  <style>
+    :root {
+      --bg: #f8f9fa;
+      --text: #212529;
+      --card-bg: #ffffff;
+      --badge-bg: #dc3545;
+      --nav-bg: #ffffff;
+      --nav-text: #212529;
+    }
 
-<!-- Navbar (same as home.html) -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    [data-theme="dark"] {
+      --bg: #121212;
+      --text: #e1e1e1;
+      --card-bg: #1f1f1f;
+      --badge-bg: #f44336;
+      --nav-bg: #1f1f1f;
+      --nav-text: #e1e1e1;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .navbar {
+      background-color: var(--nav-bg) !important;
+    }
+
+    .navbar .navbar-brand,
+    .navbar .nav-link {
+      color: var(--nav-text) !important;
+    }
+
+    .navbar .nav-link:hover {
+      text-decoration: underline;
+    }
+
+    .conversation-item {
+      transition: background 0.2s;
+      background: var(--card-bg);
+    }
+
+    .conversation-item:hover {
+      background: #e6e6e6;
+    }
+
+    [data-theme="dark"] .conversation-item:hover {
+      background: #2a2a2a;
+    }
+
+    .profile-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-right: 1rem;
+      border: 2px solid #198754;
+    }
+
+    .verified-badge {
+      color: #0d6efd;
+      margin-left: 0.3rem;
+    }
+
+    .message-preview {
+      color: #6c757d;
+      font-size: 0.9rem;
+      max-width: 300px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .badge.bg-danger {
+      background-color: var(--badge-bg) !important;
+    }
+
+    .dark-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 999;
+      background: #0d6efd;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+
+    .dark-toggle:hover {
+      background-color: #084298;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg shadow-sm">
   <div class="container">
     <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
       <span class="navbar-toggler-icon"></span>
     </button>
-
     <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
       <ul class="navbar-nav">
         <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
@@ -36,28 +137,72 @@
 
 <!-- Inbox Content -->
 <div class="container my-5">
-  <h2 class="mb-4">Your Inbox</h2>
+  <h2 class="mb-4">📥 Your Inbox</h2>
 
   {% if conversations %}
-  <ul class="list-group">
-  {% for conv, has_unread in conversations %}
-    <li class="list-group-item d-flex justify-content-between align-items-center">
-      <a href="{{ url_for('conversation_detail', conversation_id=conv.id) }}">
-        Conversation about <strong>{{ conv.ad.title }}</strong>
-      </a>
-      {% if has_unread %}
-        <span class="badge bg-danger rounded-pill">New</span>
-      {% endif %}
-    </li>
+    <div class="list-group">
+      {% for conv, has_unread in conversations %}
+        {% set partner = conv.buyer if conv.seller_id == session.get('user_id') else conv.seller %}
+        <a href="{{ url_for('conversation_detail', conversation_id=conv.id) }}" class="list-group-item list-group-item-action conversation-item d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center">
+            <img src="{{ partner.profile_pic or url_for('static', filename='images/default-profile.png') }}" class="profile-thumb" alt="Profile picture">
+            <div>
+              <div class="fw-bold">
+                {{ partner.username }}
+                {% if partner.is_verified %}
+                  <i class="fas fa-check-circle verified-badge"></i>
+                {% endif %}
+              </div>
+              <div class="message-preview">
+                {{ conv.last_message.content if conv.last_message else "No messages yet" }}
+              </div>
+            </div>
+          </div>
+          {% if has_unread %}
+            <span class="badge bg-danger rounded-pill">New</span>
+          {% endif %}
+        </a>
+      {% endfor %}
+    </div>
   {% else %}
-    <li class="list-group-item">No conversations yet.</li>
-  {% endfor %}
-</ul>
-  {% else %}
-    <p>You have no conversations yet.</p>
+    <div class="alert alert-info">You have no conversations yet.</div>
   {% endif %}
 </div>
 
+<!-- Dark Mode Toggle Button -->
+<button class="dark-toggle" id="toggleTheme" title="Toggle Dark Mode">
+  <svg xmlns="http://www.w3.org/2000/svg" height="24" width="24" fill="currentColor" viewBox="0 0 24 24" id="themeIcon">
+    <path d="M21.75 15.18a8.25 8.25 0 01-11.25-11.25 8.25 8.25 0 1011.25 11.25z"/>
+  </svg>
+</button>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggleBtn = document.getElementById('toggleTheme');
+    const themeIcon = document.getElementById('themeIcon');
+
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('clicknbuy-theme', theme);
+
+      if (theme === 'dark') {
+        themeIcon.innerHTML = '<path d="M21.75 15.18a8.25 8.25 0 01-11.25-11.25 8.25 8.25 0 1011.25 11.25z"/>';
+      } else {
+        themeIcon.innerHTML = '<path d="M12 4.5a1 1 0 100 2 1 1 0 000-2zm0 13a1 1 0 100 2 1 1 0 000-2zm7.07-9.07a1 1 0 10-1.414-1.414 1 1 0 001.414 1.414zm-12.14 0a1 1 0 10-1.414-1.414 1 1 0 001.414 1.414zm12.14 6.14a1 1 0 10-1.414 1.414 1 1 0 001.414-1.414zm-12.14 0a1 1 0 10-1.414 1.414 1 1 0 001.414-1.414zM12 9a3 3 0 100 6 3 3 0 000-6z"/>';
+      }
+    }
+
+    const saved = localStorage.getItem('clicknbuy-theme') || 'light';
+    setTheme(saved);
+
+    toggleBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      setTheme(current === 'light' ? 'dark' : 'light');
+    });
+  });
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://kit.fontawesome.com/a2d9d5fcda.js" crossorigin="anonymous"></script>
 </body>
 </html>

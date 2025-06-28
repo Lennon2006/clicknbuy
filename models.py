@@ -11,13 +11,26 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=True)  # changed from nullable=False
-    auth_provider = db.Column(db.String(50), default='local')  # NEW FIELD
-    profile_pic = db.Column(db.String(255), nullable=False, default='default-profile.png')
+    password_hash = db.Column(db.String(128), nullable=True)  # nullable if using social auth
+    auth_provider = db.Column(db.String(50), default='local')
+    profile_pic = db.Column(
+        db.String(255),
+        nullable=False,
+        default='https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg'
+    )
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_verified = db.Column(db.Boolean, default=False)
     bio = db.Column(db.Text, nullable=True, default="")
+
+    # Relationship with ActivityLog (one-to-many)
+    activity_logs = db.relationship(
+        'ActivityLog',
+        back_populates='user',
+        passive_deletes=True,
+        cascade='all, delete-orphan',
+        lazy=True
+    )
 
     ads = db.relationship('Ad', backref='owner', lazy=True)
 
@@ -33,8 +46,6 @@ class User(db.Model):
         backref='buyer',
         lazy=True
     )
-
-    activities = db.relationship('ActivityLog', backref='user', lazy=True)
 
     ratings_given = db.relationship(
         'Rating',
@@ -123,10 +134,13 @@ class Rating(db.Model):
 # ------------------ ACTIVITY LOG MODEL ------------------ #
 class ActivityLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     action = db.Column(db.String(200), nullable=False)
     ip_address = db.Column(db.String(100), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationship back to User
+    user = db.relationship('User', back_populates='activity_logs')
 
 
 # ------------------ CONVERSATION MODEL ------------------ #

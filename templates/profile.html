@@ -41,10 +41,10 @@
   <div class="row g-3">
     <div class="col-12 col-md-4 text-center">
       <img
-        src="{{ user.profile_pic if user.profile_pic else 'https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg' }}"
-        class="profile-pic mx-auto d-block mb-2"
-        alt="Profile picture of {{ user.username | e }}"
-        loading="lazy"
+         src="{{ user.profile_pic if user.profile_pic else 'https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg' }}"
+         class="profile-pic mx-auto d-block mb-2"
+         alt="Profile picture of {{ user.username | e }}"
+         loading="lazy"
       />
       <h4 class="h5">{{ user.username }} {% if user.is_verified %}<i class="fas fa-check-circle text-primary"></i>{% endif %}</h4>
       <p class="small mb-2"><strong>Email:</strong> {{ user.email }}</p>

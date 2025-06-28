@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <title>Conversation - Click N Buy</title>
@@ -8,182 +8,354 @@
   <style>
     body, html {
       height: 100%;
-      background-color: #f8f9fa;
+      background-color: var(--bg, #f8f9fa);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
     }
+    /* Light/Dark mode colors */
+    :root {
+      --bg: #f8f9fa;
+      --chat-bg: #e5ddd5;
+      --sent-bg: #25d366;
+      --received-bg: #ffffff;
+      --text-sent: white;
+      --text-received: #262626;
+      --timestamp-color: #999;
+      --border-color: #ddd;
+      --input-bg: #fff;
+    }
+    [data-theme="dark"] {
+      --bg: #121212;
+      --chat-bg: #222;
+      --sent-bg: #128c7e;
+      --received-bg: #2a2f32;
+      --text-sent: #e1e1e1;
+      --text-received: #ccc;
+      --timestamp-color: #999;
+      --border-color: #444;
+      --input-bg: #1f1f1f;
+    }
+
+    body {
+      background-color: var(--bg);
+    }
+
+    .back-btn {
+      max-width: 900px;
+      margin: 20px auto 0;
+      padding: 0 15px;
+    }
+    .back-btn a {
+      color: var(--sent-bg);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .back-btn a:hover {
+      text-decoration: underline;
+    }
+
     .chat-container {
       max-width: 900px;
-      margin: 40px auto;
+      margin: 15px auto 30px;
       display: flex;
       flex-direction: column;
       height: 80vh;
-      border-radius: 12px;
-      background: #fff;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      border-radius: 15px;
+      background: var(--chat-bg);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
       overflow: hidden;
+      padding: 0;
     }
+
     .chat-header {
-      padding: 20px;
-      background: #0d6efd;
-      color: white;
-      font-weight: 600;
+      background: var(--sent-bg);
+      color: var(--text-sent);
+      font-weight: 700;
       font-size: 1.3rem;
+      padding: 18px 25px;
       text-align: center;
+      user-select: none;
       flex-shrink: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      letter-spacing: 0.03em;
     }
+
     .chat-messages {
-      flex: 1 1 auto;
-      padding: 20px;
+      flex-grow: 1;
       overflow-y: auto;
-      background: #e9ecef;
-    }
-    .message {
+      padding: 20px 15px;
       display: flex;
-      margin-bottom: 15px;
-      align-items: flex-end;
-      max-width: 70%;
-      word-wrap: break-word;
+      flex-direction: column;
+      gap: 12px;
+      scroll-behavior: smooth;
+      background: var(--chat-bg);
+      font-size: 0.95rem;
+      line-height: 1.4;
     }
-    .message .avatar {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-right: 10px;
-      flex-shrink: 0;
-      border: 2px solid #0d6efd;
+
+    .message {
+      max-width: 65%;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      position: relative;
+      font-weight: 400;
     }
     .message.you {
       margin-left: auto;
       flex-direction: row-reverse;
+      text-align: right;
+    }
+
+    /* Avatar */
+    .message .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2.5px solid var(--sent-bg);
+      flex-shrink: 0;
+      user-select: none;
+      transition: border-color 0.3s ease;
+      cursor: default;
     }
     .message.you .avatar {
-      margin-left: 10px;
-      margin-right: 0;
-      border-color: #198754;
+      border-color: #128c7e;
     }
+
+    /* Chat bubbles */
     .bubble {
-      background: white;
-      padding: 10px 15px;
-      border-radius: 15px;
       position: relative;
-      font-size: 0.95rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      line-height: 1.3;
+      padding: 12px 18px;
+      border-radius: 20px;
+      box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+      word-break: break-word;
+      white-space: pre-wrap;
+      max-width: 100%;
+      user-select: text;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .message:not(.you) .bubble {
+      background: var(--received-bg);
+      color: var(--text-received);
+      border-bottom-left-radius: 2px;
     }
     .message.you .bubble {
-      background: #198754;
-      color: white;
+      background: var(--sent-bg);
+      color: var(--text-sent);
+      border-bottom-right-radius: 2px;
     }
+
+    /* Bubble tail */
+    .message:not(.you) .bubble::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: -6px;
+      width: 0;
+      height: 0;
+      border-top: 12px solid var(--received-bg);
+      border-right: 12px solid transparent;
+      border-left: 0 solid transparent;
+      border-bottom: 0 solid transparent;
+      border-radius: 0 0 0 0;
+    }
+    .message.you .bubble::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      right: -6px;
+      width: 0;
+      height: 0;
+      border-top: 12px solid var(--sent-bg);
+      border-left: 12px solid transparent;
+      border-right: 0 solid transparent;
+      border-bottom: 0 solid transparent;
+      border-radius: 0 0 0 0;
+    }
+
+    /* Timestamp */
     .timestamp {
-      font-size: 0.75rem;
-      color: #6c757d;
+      font-size: 0.7rem;
+      color: var(--timestamp-color);
       margin-top: 4px;
       user-select: none;
-      text-align: left;
+      letter-spacing: 0.02em;
+      opacity: 0.7;
     }
     .message.you .timestamp {
-      text-align: right;
       margin-left: auto;
-      margin-right: 0;
     }
+
+    /* Seen status */
     .seen-status {
-      font-size: 0.75rem;
-      color: #0d6efd;
+      font-size: 0.7rem;
+      color: var(--sent-bg);
       margin-top: 2px;
+      user-select: none;
+      letter-spacing: 0.02em;
+      opacity: 0.9;
       text-align: right;
     }
+
+    /* Edit & Delete Actions */
     .actions {
-      margin-left: 10px;
+      margin-left: 8px;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 6px;
       font-size: 0.75rem;
+      user-select: none;
+      cursor: default;
     }
     .actions a {
-      cursor: pointer;
-      color: #0d6efd;
+      color: var(--sent-bg);
       text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s ease;
     }
     .actions a:hover {
       text-decoration: underline;
+      color: #0b805d;
     }
+
+    /* Edit form */
     .edit-form textarea {
       width: 100%;
       min-height: 60px;
-      padding: 8px;
+      padding: 10px 14px;
       font-size: 1rem;
-      border-radius: 8px;
-      border: 1px solid #ced4da;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
       resize: vertical;
+      font-family: inherit;
     }
+
+    /* Chat input */
     .chat-input {
       flex-shrink: 0;
-      border-top: 1px solid #dee2e6;
-      padding: 15px 20px;
-      background: white;
+      padding: 14px 20px;
+      background: var(--input-bg);
       display: flex;
-      gap: 10px;
+      gap: 12px;
+      border-top: 1px solid var(--border-color);
+      align-items: center;
     }
     .chat-input textarea {
       flex-grow: 1;
       resize: none;
-      border-radius: 20px;
-      padding: 10px 15px;
-      border: 1px solid #ced4da;
-      font-size: 1rem;
-      height: 50px;
-    }
-    .chat-input button {
-      background: #0d6efd;
-      border: none;
-      color: white;
-      font-weight: 600;
-      border-radius: 20px;
-      padding: 0 20px;
-      cursor: pointer;
+      border-radius: 25px;
+      padding: 12px 18px;
+      font-size: 1.1rem;
+      border: 1px solid var(--border-color);
+      font-family: inherit;
+      min-height: 48px;
+      max-height: 120px;
+      overflow-y: auto;
+      line-height: 1.3;
+      color: var(--text-received);
+      background: var(--received-bg);
       transition: background-color 0.3s ease;
     }
-    .chat-input button:hover {
-      background-color: #084298;
+    .chat-input textarea::placeholder {
+      color: #999;
+      opacity: 0.7;
+    }
+    .chat-input button {
+      background: var(--sent-bg);
+      border: none;
+      color: var(--text-sent);
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 0 22px;
+      border-radius: 50%;
+      height: 48px;
+      width: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    .chat-input button:hover:not(:disabled) {
+      background: #128c7e;
+    }
+    .chat-input button:disabled {
+      background: #9be6b8;
+      cursor: not-allowed;
+    }
+
+    /* Dark mode toggle button */
+    .dark-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 999;
+      background: var(--sent-bg);
+      color: var(--text-sent);
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    .dark-toggle:hover {
+      background-color: #128c7e;
     }
   </style>
 </head>
 <body>
-<div class="chat-container">
-  <div class="chat-header">
+
+<div class="back-btn">
+  <a href="{{ url_for('inbox') }}">🔙 Back to Inbox</a>
+</div>
+
+<div class="chat-container" role="main" aria-label="Chat conversation">
+  <div class="chat-header" role="heading" aria-level="1" tabindex="0">
     Conversation about: <strong>{{ conversation.ad.title }}</strong>
   </div>
 
-  <div class="chat-messages" id="chatMessages">
+  <div class="chat-messages" id="chatMessages" tabindex="0" aria-live="polite" aria-relevant="additions text">
     {% for msg in conversation.messages %}
       <div class="message {% if msg.sender_id == user_id %}you{% endif %}">
-        <img
-          src="{{ url_for('static', filename='uploads/' ~ (msg.sender.profile_pic or 'images/default-profile.png')) }}"
-          alt="Avatar" class="avatar"
-          loading="lazy"
-          title="{{ msg.sender.username }}"
-        />
+        {% set pic = msg.sender.profile_pic %}
+        {% if pic and pic.startswith('http') %}
+          <img src="{{ pic }}" class="avatar" title="{{ msg.sender.username }}" loading="lazy" alt="Profile picture of {{ msg.sender.username }}" />
+        {% else %}
+          <img src="https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg" class="avatar" title="{{ msg.sender.username }}" loading="lazy" alt="Default profile picture" />
+        {% endif %}
         <div>
           {% if request.args.get('edit')|int == msg.id and msg.sender_id == user_id %}
-            <form method="POST" action="{{ url_for('conversation_detail', conversation_id=conversation.id) }}?edit={{ msg.id }}" class="edit-form">
-              <textarea name="edit_message" required>{{ msg.content }}</textarea>
+            <form method="POST" action="{{ url_for('conversation_detail', conversation_id=conversation.id) }}?edit={{ msg.id }}" class="edit-form" aria-label="Edit message form">
+              <textarea name="edit_message" required aria-required="true" aria-describedby="editHelp">{{ msg.content }}</textarea>
               <div>
                 <button type="submit" class="btn btn-sm btn-primary mt-2">Save</button>
                 <a href="{{ url_for('conversation_detail', conversation_id=conversation.id) }}" class="btn btn-sm btn-secondary mt-2">Cancel</a>
               </div>
             </form>
           {% else %}
-            <div class="bubble">{{ msg.content|e }}</div>
+            <div class="bubble" role="textbox" aria-readonly="true">{{ msg.content|e }}</div>
             <div class="timestamp">{{ msg.timestamp.strftime('%Y-%m-%d %H:%M') }}</div>
             {% if msg.sender_id == user_id and msg.is_read %}
-              <div class="seen-status">Seen</div>
+              <div class="seen-status" aria-label="Message seen status">Seen</div>
             {% endif %}
           {% endif %}
         </div>
         {% if msg.sender_id == user_id and (request.args.get('edit')|int != msg.id) %}
-          <div class="actions">
-            <a href="{{ url_for('conversation_detail', conversation_id=conversation.id) }}?edit={{ msg.id }}">Edit</a>
-            <a href="{{ url_for('conversation_detail', conversation_id=conversation.id) }}?delete={{ msg.id }}" onclick="return confirm('Delete this message?');" style="color:#dc3545;">Delete</a>
+          <div class="actions" aria-label="Message actions">
+            <a href="{{ url_for('conversation_detail', conversation_id=conversation.id) }}?edit={{ msg.id }}" role="button" tabindex="0">Edit</a>
+            <a href="{{ url_for('conversation_detail', conversation_id=conversation.id) }}?delete={{ msg.id }}" onclick="return confirm('Delete this message?');" style="color:#dc3545;" role="button" tabindex="0">Delete</a>
           </div>
         {% endif %}
       </div>
@@ -192,19 +364,63 @@
     {% endfor %}
   </div>
 
-  <form method="POST" action="{{ url_for('conversation_detail', conversation_id=conversation.id) }}" class="chat-input">
-    <textarea name="new_message" placeholder="Type your message..." required maxlength="500" rows="1" oninput="autoResize(this)"></textarea>
-    <button type="submit">Send</button>
+  <form method="POST" action="{{ url_for('conversation_detail', conversation_id=conversation.id) }}" class="chat-input" aria-label="Send new message form">
+    <textarea name="new_message" placeholder="Type your message..." required maxlength="500" rows="1" oninput="autoResize(this)" aria-required="true"></textarea>
+    <button type="submit" aria-label="Send message" id="sendBtn" disabled>
+      <svg xmlns="http://www.w3.org/2000/svg" height="22" width="22" fill="currentColor" viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
   </form>
 </div>
+
+<!-- Dark mode toggle button -->
+<button class="dark-toggle" id="toggleTheme" title="Toggle dark mode" aria-label="Toggle dark mode">
+  <svg xmlns="http://www.w3.org/2000/svg" height="26" width="26" fill="currentColor" viewBox="0 0 24 24" id="themeIcon"><path d="M21.75 15.18a8.25 8.25 0 01-11.25-11.25 8.25 8.25 0 1011.25 11.25z"/></svg>
+</button>
 
 <script>
   function autoResize(textarea) {
     textarea.style.height = 'auto';
     textarea.style.height = (textarea.scrollHeight) + 'px';
+    toggleSendButton();
   }
-  const chatMessages = document.getElementById('chatMessages');
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  function toggleSendButton() {
+    const input = document.querySelector('textarea[name="new_message"]');
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn.disabled = !input.value.trim().length;
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    toggleSendButton();
+
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Dark mode toggle logic
+    const toggleBtn = document.getElementById('toggleTheme');
+    const themeIcon = document.getElementById('themeIcon');
+
+    function setTheme(theme) {
+      if(theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('clicknbuy-theme', 'dark');
+        // Moon icon for dark mode
+        themeIcon.innerHTML = '<path d="M21.75 15.18a8.25 8.25 0 01-11.25-11.25 8.25 8.25 0 1011.25 11.25z"/>';
+      } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem('clicknbuy-theme', 'light');
+        // Sun icon for light mode
+        themeIcon.innerHTML = '<path d="M12 4.5a1 1 0 100 2 1 1 0 000-2zm0 13a1 1 0 100 2 1 1 0 000-2zm7.07-9.07a1 1 0 10-1.414-1.414 1 1 0 001.414 1.414zm-12.14 0a1 1 0 10-1.414-1.414 1 1 0 001.414 1.414zm12.14 6.14a1 1 0 10-1.414 1.414 1 1 0 001.414-1.414zm-12.14 0a1 1 0 10-1.414 1.414 1 1 0 001.414-1.414zM12 9a3 3 0 100 6 3 3 0 000-6z"/>';
+      }
+    }
+
+    // Load saved theme or default light
+    const savedTheme = localStorage.getItem('clicknbuy-theme') || 'light';
+    setTheme(savedTheme);
+
+    toggleBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      setTheme(current === 'light' ? 'dark' : 'light');
+    });
+  });
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

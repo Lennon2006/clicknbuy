@@ -1,10 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Register - Click N Buy</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    .profile-pic-preview {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 3px solid #0d6efd;
+      margin-bottom: 1rem;
+    }
+    .form-container {
+      background: white;
+      border-radius: 0.5rem;
+      padding: 2rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+  </style>
 </head>
 <body class="bg-light">
 
@@ -32,10 +48,21 @@
 
 <div class="container my-5">
   <div class="row justify-content-center">
-    <div class="col-12 col-md-8 col-lg-6 bg-white p-4 rounded shadow-sm">
-      <h2 class="mb-4 text-center">Create Your Account</h2>
+    <div class="col-12 col-md-8 col-lg-6 form-container">
+      <h2 class="text-center mb-4">Create Your Account</h2>
 
-      <form method="POST">
+      <form method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
+        <!-- Profile Picture Preview -->
+        <div class="text-center">
+          <img id="preview" src="https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg"
+               class="profile-pic-preview mx-auto d-block" alt="Preview" />
+        </div>
+
+        <div class="mb-3">
+          <label for="profile_pic" class="form-label">Profile Picture (optional)</label>
+          <input type="file" class="form-control" id="profile_pic" name="profile_pic" accept="image/*" onchange="previewImage(event)" />
+        </div>
+
         <div class="mb-3">
           <label for="username" class="form-label">Username</label>
           <input type="text" name="username" id="username" class="form-control" required />
@@ -74,5 +101,36 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function previewImage(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById("preview");
+
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Image must be smaller than 2MB.");
+        event.target.value = ""; // Clear the file input
+        preview.src = "https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        preview.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function validateForm() {
+    const password = document.getElementById("password").value;
+    const confirm = document.getElementById("confirm_password").value;
+    if (password !== confirm) {
+      alert("Passwords do not match.");
+      return false;
+    }
+    return true;
+  }
+</script>
 </body>
 </html>

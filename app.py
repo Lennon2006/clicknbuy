@@ -173,20 +173,35 @@ def home():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    DEFAULT_PROFILE_PIC_URL = 'https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg'
+
     if request.method == 'POST':
         username = request.form['username'].strip()
         email = request.form['email'].strip()
         password = request.form['password']
+        file = request.files.get('profile_pic')
 
+        # Check if username or email already exists
         if User.query.filter((User.username == username) | (User.email == email)).first():
             flash("Username or email already taken.", "danger")
             return redirect(url_for('register'))
 
+        # Try uploading to Cloudinary if a file is provided
+        profile_pic_url = DEFAULT_PROFILE_PIC_URL
+        if file and file.filename and '.' in file.filename:
+            try:
+                upload_result = cloudinary.uploader.upload(file, folder="profile_pics")
+                profile_pic_url = upload_result['secure_url']
+            except Exception as e:
+                print("Cloudinary upload error:", e)
+                flash("Could not upload profile picture. Default will be used.", "warning")
+
+        # Create user
         new_user = User(
             username=username,
             email=email,
             password_hash=generate_password_hash(password),
-            profile_pic='default-profile.png'
+            profile_pic=profile_pic_url
         )
 
         db.session.add(new_user)
@@ -195,6 +210,7 @@ def register():
         return redirect(url_for('login'))
 
     return render_template('register.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -826,24 +842,55 @@ def admin_users():
 @admin_required
 def admin_delete_user(user_id):
     user = User.query.get_or_404(user_id)
-    if user.id == user.id:
+
+    # Prevent admin from deleting themselves
+    if user.id == session.get('user_id'):
         flash("You cannot delete your own account.", "warning")
         return redirect(url_for('admin_users'))
+
     db.session.delete(user)
     db.session.commit()
     flash(f"User {user.username} deleted.", "success")
     return redirect(url_for('admin_users'))
 
+
 # Verify a user
 @app.route('/admin/users/verify/<int:user_id>', methods=['POST'])
 @login_required
 @admin_required
-def admin_verify_user(user_id):
+def admin_toggle_verify_user(user_id):
     user = User.query.get_or_404(user_id)
-    user.is_verified = True
+    
+    if user.id == session.get("user_id"):
+        flash("You can't verify or unverify your own account.", "warning")
+        return redirect(url_for('admin_users'))
+    
+    user.is_verified = not user.is_verified  # Toggle
     db.session.commit()
-    flash(f"User {user.username} verified.", "success")
+    
+    action = "verified" if user.is_verified else "unverified"
+    flash(f"User {user.username} has been {action}.", "success")
     return redirect(url_for('admin_users'))
+
+
+#toggle-verification
+@app.route('/admin/users/toggle-verification/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def admin_toggle_verification(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if user.id == session.get('user_id'):
+        flash("You cannot change your own verification status.", "warning")
+        return redirect(url_for('admin_users'))
+
+    user.is_verified = not user.is_verified
+    status = "verified" if user.is_verified else "unverified"
+    db.session.commit()
+    flash(f"User {user.username} is now {status}.", "success")
+    return redirect(url_for('admin_users'))
+
+
 
 
 if __name__ == '__main__':
