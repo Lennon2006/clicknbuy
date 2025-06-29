@@ -39,6 +39,8 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(16)
 load_dotenv()
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+REDIRECT_URI = os.getenv("REDIRECT_URI")
+
 
 
 # Load categories once at startup
@@ -243,7 +245,12 @@ def login():
             flash("Invalid login details.", "danger")
             return redirect(url_for('login'))
 
-    return render_template('login.html')
+    return render_template(
+        'login.html',
+        GOOGLE_CLIENT_ID=os.getenv("GOOGLE_CLIENT_ID"),
+        REDIRECT_URI=os.getenv("REDIRECT_URI")
+    )
+
 
 
 @app.route('/google-login/callback', methods=['POST'])
