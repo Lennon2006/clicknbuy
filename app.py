@@ -28,10 +28,6 @@ import secrets
 
 
 
-
-
-
-
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -53,7 +49,11 @@ with open(os.path.join(basedir, 'data', 'categories.json')) as f:
 # Config
 UPLOAD_FOLDER = os.path.join(basedir, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {
+    'png', 'jpg', 'jpeg', 'gif', 'webp',
+    'bmp', 'tiff', 'tif', 'svg', 'heic', 'heif', 'ico'
+}
+
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'ads.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -72,6 +72,14 @@ with app.app_context():
     db.create_all()
     print("Total users:", User.query.count())
 
+#CLOUDINARY 
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True
+)
+
 # Decorator to restrict admin access
 def admin_required(f):
     @wraps(f)
@@ -86,7 +94,6 @@ def admin_required(f):
 
 
 def allowed_file(filename):
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def login_required(f):
@@ -443,51 +450,46 @@ def post_ad():
         location = request.form.get('location')
         user_id = int(session['user_id'])
 
-        # Validate required fields
-        if not all([title, description, price, category, post_type, contact]):
+        # Validate required fields including subcategory
+        if not all([title, description, price, category, subcategory, post_type, contact]):
             flash("Please fill out all required fields.", "danger")
             return redirect(url_for('post_ad'))
 
-        # Create new ad entry
-        new_ad = Ad(
-            title=title,
-            description=description,
-            price=price,
-            category=category,
-            subcategory=subcategory,
-            post_type=post_type,
-            contact=contact,
-            location=location,
-            user_id=user_id,
-            created_at=datetime.utcnow()
-        )
+        images = request.files.getlist('images')
+        if len(images) > 10:
+            flash("You can upload a maximum of 10 images.", "warning")
+            return redirect(url_for('post_ad'))
 
         try:
-            db.session.add(new_ad)
-            db.session.commit()
+            new_ad = Ad(
+                title=title,
+                description=description,
+                price=price,
+                category=category,
+                subcategory=subcategory,
+                post_type=post_type,
+                contact=contact,
+                location=location,
+                user_id=user_id,
+                created_at=datetime.utcnow()
+            )
 
-            # Handle images
-            images = request.files.getlist('images')
-            if len(images) > 10:
-                flash("You can upload a maximum of 10 images.", "warning")
-                return redirect(url_for('post_ad'))
+            db.session.add(new_ad)
+            db.session.flush()  # Get new_ad.id before adding images
 
             for image in images:
                 if image and allowed_file(image.filename):
-                    try:
-                        upload_result = cloudinary.uploader.upload(
-                            image,
-                            folder="clicknbuy_ads"
-                        )
-                        secure_url = upload_result.get("secure_url")
-                        if secure_url:
-                            new_image = Image(url=secure_url, ad_id=new_ad.id)
-                            db.session.add(new_image)
-                    except CloudinaryError as e:
-                        print(f"Cloudinary error: {e}")
-                        flash("One or more images failed to upload.", "warning")
+                    upload_result = cloudinary.uploader.upload(
+                        image,
+                        folder="clicknbuy_ads"
+                    )
+                    secure_url = upload_result.get("secure_url")
+                    if secure_url:
+                        new_image = Image(url=secure_url, ad_id=new_ad.id)
+                        db.session.add(new_image)
 
             db.session.commit()
+
             log_activity(user_id, "Posted an ad")
             flash("Ad posted successfully!", "success")
             return redirect(url_for('show_ads'))
@@ -496,10 +498,9 @@ def post_ad():
             db.session.rollback()
             print(f"Error posting ad: {e}")
             flash("An error occurred while posting your ad.", "danger")
+            return redirect(url_for('post_ad'))
 
     return render_template('post.html', categories=categories)
-
-
 
 @app.route('/edit/<int:ad_id>', methods=['GET', 'POST'])
 @login_required
@@ -517,29 +518,38 @@ def edit_ad(ad_id):
         ad.contact = request.form['contact']
         ad.location = request.form['location']
 
+        # Handle image deletions
         delete_ids = request.form.getlist('delete_images')
         for img_id in delete_ids:
             img = Image.query.get(int(img_id))
             if img and img.ad_id == ad.id:
-                try:
-                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], img.filename))
-                except Exception as e:
-                    print(f"Error deleting image file: {e}")
-                db.session.delete(img)
+                db.session.delete(img)  # Optionally: delete from Cloudinary too
 
-        for image in request.files.getlist('images'):
+        # Upload new images
+        images = request.files.getlist('images')
+        current_image_count = len(ad.images) - len(delete_ids)
+
+        if current_image_count + len(images) > 10:
+            flash("You can only have up to 10 images total.", "warning")
+            return redirect(url_for('edit_ad', ad_id=ad.id))
+
+        for image in images:
             if image and allowed_file(image.filename):
-                filename = secure_filename(image.filename)
-                unique_name = f"user_{session['user_id']}_{uuid.uuid4().hex}_{filename}"
-                path = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
-                image.save(path)
-                db.session.add(Image(filename=unique_name, ad_id=ad.id))
+                upload_result = cloudinary.uploader.upload(
+                    image,
+                    folder="clicknbuy_ads"
+                )
+                secure_url = upload_result.get("secure_url")
+                if secure_url:
+                    new_image = Image(url=secure_url, ad_id=ad.id)
+                    db.session.add(new_image)
 
         db.session.commit()
-        flash("Ad updated.", "success")
+        flash("Ad updated successfully.", "success")
         return redirect(url_for('show_ads'))
 
     return render_template('edit.html', ad=ad, categories=categories)
+
 
 @app.route('/delete/<int:ad_id>', methods=['POST'])
 @login_required
