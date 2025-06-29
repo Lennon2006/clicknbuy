@@ -1,0 +1,295 @@
+[33mcommit 1b4eb10f9af2590402885fccb66481f4f7221133[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Sun Jun 29 00:43:59 2025 +0200
+
+    Remove secrets and update code
+
+ .gitignore                                         |   2 [32m+[m[31m-[m
+ __pycache__/app.cpython-313.pyc                    | Bin [31m48316[m -> [32m47340[m bytes
+ __pycache__/models.cpython-313.pyc                 | Bin [31m10134[m -> [32m10385[m bytes
+ ads.db                                             | Bin [31m61440[m -> [32m61440[m bytes
+ app.py                                             |  57 [32m++[m[31m-[m
+ models.py                                          |  26 [32m+[m[31m-[m
+ ...72e1d_ChatGPT_Image_Jun_26_2025_03_45_55_PM.png | Bin [31m1235961[m -> [32m0[m bytes
+ ...f419c_ChatGPT_Image_Jun_26_2025_03_47_18_PM.png | Bin [31m1106636[m -> [32m0[m bytes
+ ...f5e4e_ChatGPT_Image_Jun_26_2025_03_47_18_PM.png | Bin [31m1106636[m -> [32m0[m bytes
+ ...4b821_ChatGPT_Image_Jun_26_2025_03_47_18_PM.png | Bin [31m1106636[m -> [32m0[m bytes
+ templates/ad_detail.html                           |  51 [32m++[m[31m-[m
+ templates/admin_users.html                         | 108 [32m+++[m[31m--[m
+ templates/conversation_detail.html                 | 388 [32m++++++++++++[m[31m----[m
+ templates/inbox.html                               | 187 [32m+++++++[m[31m-[m
+ templates/messages.html                            | 504 [32m+++++++++++++++[m[31m------[m
+ templates/profile.html                             |   8 [32m+[m[31m-[m
+ templates/register.html                            |  66 [32m++[m[31m-[m
+ update_default_pics.py                             |  21 [32m+[m
+ update_profile_pics.py                             |  21 [32m+[m
+ 19 files changed, 1133 insertions(+), 306 deletions(-)
+
+[33mcommit d12751013c2811b7ea3adeb830919ba2eae09733[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Sat Jun 28 20:42:19 2025 +0200
+
+    Updated features
+
+ __pycache__/app.cpython-313.pyc                    | Bin [31m48844[m -> [32m48316[m bytes
+ __pycache__/models.cpython-313.pyc                 | Bin [31m9969[m -> [32m10134[m bytes
+ ads.db                                             | Bin [31m49152[m -> [32m61440[m bytes
+ app.py                                             | 124 [32m+++++++[m[31m--------[m
+ migrations/__pycache__/env.cpython-313.pyc         | Bin [31m4540[m -> [32m4540[m bytes
+ ...fb22f4a8d27_initial_migration_with_timestamp.py |  34 [32m+++++[m
+ ...nitial_migration_with_timestamp.cpython-313.pyc | Bin [31m0[m -> [32m1541[m bytes
+ .../__pycache__/bc2eb31450d5_.cpython-313.pyc      | Bin [31m1698[m -> [32m0[m bytes
+ migrations/versions/bc2eb31450d5_.py               |  40 [31m-----[m
+ models.py                                          |   3 [32m+[m[31m-[m
+ templates/edit.html                                |  10 [32m+[m[31m-[m
+ templates/edit_profile.html                        |   8 [32m+[m[31m-[m
+ templates/home.html                                | 166 [32m++++++++++++++++[m[31m-----[m
+ templates/profile.html                             |   6 [32m+[m[31m-[m
+ templates/profile_public.html                      |   4 [32m+[m[31m-[m
+ test_app.py                                        |  50 [32m++[m[31m-----[m
+ 16 files changed, 241 insertions(+), 204 deletions(-)
+
+[33mcommit 115eccf81af65612cdfcca51e854d4c817c277d7[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Sat Jun 28 07:02:43 2025 +0200
+
+    update
+
+ __pycache__/app.cpython-313.pyc                    | Bin [31m43893[m -> [32m48844[m bytes
+ __pycache__/models.cpython-313.pyc                 | Bin [31m9862[m -> [32m9969[m bytes
+ ads.db                                             | Bin [31m40960[m -> [32m49152[m bytes
+ app.py                                             | 175 [32m++++++++++[m[31m----[m
+ migrations/__pycache__/env.cpython-313.pyc         | Bin [31m4540[m -> [32m4540[m bytes
+ .../77fca1fe41e7_remove_bio_column_from_user.py    |  32 [31m---[m
+ ...1e7_remove_bio_column_from_user.cpython-313.pyc | Bin [31m1284[m -> [32m0[m bytes
+ .../__pycache__/bc2eb31450d5_.cpython-313.pyc      | Bin [31m0[m -> [32m1698[m bytes
+ migrations/versions/bc2eb31450d5_.py               |  40 [32m++++[m
+ models.py                                          |  11 [32m+[m[31m-[m
+ requirements.txt                                   | Bin [31m2082[m -> [32m2432[m bytes
+ static/default.jpg                                 | Bin [31m0[m -> [32m406004[m bytes
+ ...4b821_ChatGPT_Image_Jun_26_2025_03_47_18_PM.png | Bin [31m0[m -> [32m1106636[m bytes
+ ...r_2_c8d87a2b4a5049da9050cc4623789f8e_LAMBO.jpeg | Bin [31m6838[m -> [32m0[m bytes
+ templates/ad_detail.html                           | 117 [32m++++[m[31m------[m
+ templates/ads.html                                 | 258 [32m+++++++[m[31m--------------[m
+ templates/home.html                                | 196 [32m+++++[m[31m-----------[m
+ templates/login.html                               |  40 [32m+++[m[31m-[m
+ templates/minimal.html                             |  24 [32m++[m
+ templates/post.html                                |  99 [32m+++++[m[31m---[m
+ test_app.py                                        |  49 [32m++++[m
+ 21 files changed, 528 insertions(+), 513 deletions(-)
+
+[33mcommit aae2bc7746334d798ec9ec9aa88323881633a3b9[m
+Author: Lennon2006 <jonesmangundu@gmail.com>
+Date:   Sat Jun 28 13:51:43 2025 +0200
+
+    Create CNAME
+
+ CNAME | 1 [32m+[m
+ 1 file changed, 1 insertion(+)
+
+[33mcommit 5a4cb4b6cc1cc925f60ce543e3e34b1df59cc3a2[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Fri Jun 27 04:45:49 2025 +0200
+
+    Updated
+
+ app.py           |  12 [32m++++[m[31m--------[m
+ requirements.txt | Bin [31m2042[m -> [32m2082[m bytes
+ 2 files changed, 4 insertions(+), 8 deletions(-)
+
+[33mcommit 1d9065b87d2428e26d42ca091078990a68e46253[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Fri Jun 27 04:31:58 2025 +0200
+
+    Updated
+
+ app.py | 3 [31m---[m
+ 1 file changed, 3 deletions(-)
+
+[33mcommit 58d8ab2fc9d3e54b152b694fe1e52f3415394076[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Fri Jun 27 04:28:22 2025 +0200
+
+    new  features
+
+ app.py | 14 [32m+++++[m[31m---------[m
+ 1 file changed, 5 insertions(+), 9 deletions(-)
+
+[33mcommit c46782ef779d34987335ffdb6f4d43f18c632ae7[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Fri Jun 27 04:23:34 2025 +0200
+
+    New features
+
+ .env.txt                                           |   1 [32m+[m
+ .vscode/settings.json                              |   8 [32m+[m
+ __pycache__/app.cpython-313.pyc                    | Bin [31m34553[m -> [32m43893[m bytes
+ __pycache__/models.cpython-313.pyc                 | Bin [31m9585[m -> [32m9862[m bytes
+ ads.db                                             | Bin [31m49152[m -> [32m40960[m bytes
+ app.py                                             | 233 [32m++++++[m[31m--[m
+ main.py.py                                         | 613 [31m---------------------[m
+ .../77fca1fe41e7_remove_bio_column_from_user.py    |  32 [32m++[m
+ ...1e7_remove_bio_column_from_user.cpython-313.pyc | Bin [31m0[m -> [32m1284[m bytes
+ models.py                                          |  25 [32m+[m[31m-[m
+ ...default-profile.png.png => default-profile.png} | Bin
+ static/images/{logo.png.png => logo.png}           | Bin
+ ..._Image_Jun_18_2025_11_39_46_AM.png => logo.png} | Bin
+ ..._Image_Jun_18_2025_11_39_46_AM.png => logo.png} | Bin
+ ...2e1d_ChatGPT_Image_Jun_26_2025_03_45_55_PM.png} | Bin
+ ...r_1_29c8102ded8f439fb8f7a9174f8ec691_LAMBO.jpeg | Bin [31m6838[m -> [32m0[m bytes
+ ...d4ede_ChatGPT_Image_Jun_18_2025_12_17_47_PM.png | Bin [31m1114131[m -> [32m0[m bytes
+ ...r_1_4e463236945a43d08e2fbf3fb9b1ec3c_LAMBO.jpeg | Bin [31m6838[m -> [32m0[m bytes
+ ...c3b6c_ChatGPT_Image_Jun_18_2025_12_17_47_PM.png | Bin [31m1114131[m -> [32m0[m bytes
+ ...1ea8d_ChatGPT_Image_Jun_18_2025_02_22_16_PM.png | Bin [31m1555136[m -> [32m0[m bytes
+ ...55b43_ChatGPT_Image_Jun_18_2025_02_22_16_PM.png | Bin [31m1555136[m -> [32m0[m bytes
+ ...ser_1_ChatGPT_Image_Jun_18_2025_12_17_47_PM.png | Bin [31m1114131[m -> [32m0[m bytes
+ ...419c_ChatGPT_Image_Jun_26_2025_03_47_18_PM.png} | Bin
+ ...2690f_ChatGPT_Image_Jun_18_2025_12_17_47_PM.png | Bin [31m1114131[m -> [32m0[m bytes
+ ...0428a_ChatGPT_Image_Jun_18_2025_11_39_46_AM.png | Bin [31m1176027[m -> [32m0[m bytes
+ ...c1b4c_ChatGPT_Image_Jun_18_2025_12_17_47_PM.png | Bin [31m1114131[m -> [32m0[m bytes
+ ...f5e4e_ChatGPT_Image_Jun_26_2025_03_47_18_PM.png | Bin [31m0[m -> [32m1106636[m bytes
+ ...r_1_f633bd4ab61f431a9e82111a82bf7b1f_LAMBO.jpeg | Bin [31m6838[m -> [32m0[m bytes
+ ...97627_ChatGPT_Image_Jun_18_2025_11_39_46_AM.png | Bin [31m1176027[m -> [32m0[m bytes
+ ...60d93_ChatGPT_Image_Jun_18_2025_02_22_16_PM.png | Bin [31m1555136[m -> [32m0[m bytes
+ ...cdc97_ChatGPT_Image_Jun_18_2025_12_17_47_PM.png | Bin [31m1114131[m -> [32m0[m bytes
+ ...ymus-hacker-computer-mask-wallpaper-preview.jpg | Bin [31m32870[m -> [32m0[m bytes
+ ...e5c58_ChatGPT_Image_Jun_18_2025_02_22_16_PM.png | Bin [31m1555136[m -> [32m0[m bytes
+ ...d53e9_ChatGPT_Image_Jun_18_2025_02_22_16_PM.png | Bin [31m1555136[m -> [32m0[m bytes
+ ...r_2_c12386e1c3c246f7952d7fe27ada024a_LAMBO.jpeg | Bin [31m6838[m -> [32m0[m bytes
+ ..._2_c8d87a2b4a5049da9050cc4623789f8e_LAMBO.jpeg} | Bin
+ templates/ad_detail.html                           |  26 [32m+[m[31m-[m
+ templates/edit_profile.html                        |  70 [32m++[m[31m-[m
+ templates/home.html                                |  21 [32m+[m[31m-[m
+ templates/profile.html                             | 308 [32m+++[m[31m--------[m
+ templates/profile_public.html                      |  27 [32m+[m[31m-[m
+ .../ChatGPT_Image_Jun_18_2025_11_39_46_AM.png      | Bin [31m1176027[m -> [32m0[m bytes
+ .../ChatGPT_Image_Jun_18_2025_12_17_47_PM.png      | Bin [31m1114131[m -> [32m0[m bytes
+ .../static/uploads/WIN_20250618_19_49_15_Pro.jpg   | Bin [31m86779[m -> [32m0[m bytes
+ 44 files changed, 450 insertions(+), 914 deletions(-)
+
+[33mcommit 018b54d95925c0cf1e6d6c2d40fc867a140d8ba4[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Thu Jun 26 20:06:41 2025 +0200
+
+    New Features
+
+ ads.db                                             | Bin [31m49152[m -> [32m49152[m bytes
+ ...6b95a_ChatGPT_Image_Jun_26_2025_03_45_55_PM.png | Bin [31m0[m -> [32m1235961[m bytes
+ ...2cc91_ChatGPT_Image_Jun_26_2025_03_47_18_PM.png | Bin [31m0[m -> [32m1106636[m bytes
+ templates/ad_detail.html                           | 139 [32m+++++++[m[31m--[m
+ templates/ads.html                                 | 341 [32m+++++++++++++++++[m[31m----[m
+ templates/post.html                                | 195 [32m+++++++[m[31m-----[m
+ templates/profile.html                             | 100 [32m+++++[m[31m-[m
+ 7 files changed, 597 insertions(+), 178 deletions(-)
+
+[33mcommit bc87f0aa51e844a3be882b0dcca17ae141f8e8db[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Thu Jun 26 17:18:10 2025 +0200
+
+    updated homepage
+
+ __pycache__/models.cpython-313.pyc | Bin [31m9585[m -> [32m9585[m bytes
+ ads.db                             | Bin [31m49152[m -> [32m49152[m bytes
+ static/images/requirements.txt     | Bin [31m2042[m -> [32m0[m bytes
+ templates/home.html                | 754 [32m+++++++++++++++[m[31m----------------------[m
+ 4 files changed, 299 insertions(+), 455 deletions(-)
+
+[33mcommit 9a37b92f9e57b1ad46724432478a7b6973103ab9[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Wed Jun 25 11:53:45 2025 +0200
+
+    Update requirements.txt with current dependencies
+
+ requirements.txt | Bin [31m1694[m -> [32m2042[m bytes
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+
+[33mcommit 31c0bcbf937d0e594548ade11c6fa18ddcdd3217[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Wed Jun 25 11:50:20 2025 +0200
+
+    Add Flask-SocketIO to requirements
+
+ static/images/requirements.txt | Bin [31m0[m -> [32m2042[m bytes
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+
+[33mcommit 3930e60ad1c6f8a0edcacd0cc5597de0ae700a1a[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Wed Jun 25 06:43:24 2025 +0200
+
+    Added new features
+
+ __pycache__/app.cpython-313.pyc                    | Bin [31m38987[m -> [32m34553[m bytes
+ __pycache__/models.cpython-313.pyc                 | Bin [31m9499[m -> [32m9585[m bytes
+ ads.db                                             | Bin [31m40960[m -> [32m49152[m bytes
+ app.py                                             | 126 [32m++++[m[31m-[m
+ migrations/__pycache__/env.cpython-313.pyc         | Bin [31m4603[m -> [32m4540[m bytes
+ migrations/env.py                                  |  79 [32m++[m[31m--[m
+ models.py                                          |   1 [32m+[m
+ ...r_1_29c8102ded8f439fb8f7a9174f8ec691_LAMBO.jpeg | Bin [31m0[m -> [32m6838[m bytes
+ templates/about.html                               |  20 [32m+[m
+ templates/ad_detail.html                           |  66 [32m++[m[31m-[m
+ templates/base.html                                | 514 [32m+++++++++++++++++++++[m
+ templates/conversation_detail.html                 | 212 [32m+++++++++[m
+ templates/edit_profile.html                        |   4 [32m+[m
+ templates/home.html                                | 105 [32m+++[m[31m--[m
+ templates/inbox.html                               |  35 [32m+[m[31m-[m
+ templates/terms.html                               |  24 [32m+[m
+ 16 files changed, 1065 insertions(+), 121 deletions(-)
+
+[33mcommit 6f016e132306b89e3d14df89666de70681e2a890[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Wed Jun 25 04:11:47 2025 +0200
+
+    Rename back to categories.json
+
+ data/{categories_temp.json => categories.json} | 0
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+
+[33mcommit 623c69d6d532c91915fddad74ead8806ba30eca6[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Wed Jun 25 04:11:20 2025 +0200
+
+    Rename categories.json to force tracking
+
+ data/{categories.JSON => categories_temp.json} | 0
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+
+[33mcommit 29defd460ebfe1aa253c63c4db93b0be2ee3a932[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Wed Jun 25 03:55:10 2025 +0200
+
+    Good
+
+ app.py | 3 [32m++[m[31m-[m
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+[33mcommit b8cf0d71d293ffb65ad468433832a7c3d95c3c08[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Wed Jun 25 03:24:32 2025 +0200
+
+    updated feature
+
+ app.py | 2 [32m+[m[31m-[m
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+[33mcommit 1724f2be8f44b179b41293c88bef88d8c3bc2ff3[m
+Author: Jones Mangundu <jonesmangundu@gmail.com>
+Date:   Wed Jun 25 02:28:39 2025 +0200
+
+    Updated features
+
+ __pycache__/app.cpython-313.pyc                    | Bin [31m38476[m -> [32m38987[m bytes
+ __pycache__/models.cpython-313.pyc                 | Bin [31m9577[m -> [32m9499[m bytes
+ ads.db                                             | Bin [31m49152[m -> [32m40960[m bytes
+ alembic.ini                                        |  43 [32m++++[m
+ app.py                                             | 230 [32m++++++++[m[31m-------------[m
+ data/categories.JSON                               |  72 [32m+++++++[m
+ migrations/__pycache__/env.cpython-313.pyc         | Bin [31m4540[m -> [32m4603[m bytes
+ migrations/env.py                                  |  79 [32m+++[m[31m----[m
+ .../8c8226d479c8_add_is_verified_column.py         |  24 [31m---[m
+ ...26d479c8_add_is_verified_column.cpython-313.pyc | Bin [31m686[m -> [32m0[m bytes
+ models.py                                          |  50 [32m+++[m[31m--[m
+ ...81374_ChatGPT_Image_Jun_18_2025_11_39_46_AM.png | Bin [31m1176027[m -> [32m0[m bytes
+ ...r_1_2644a07ac3b74a4b89ce729c7bc4ff38_LAMBO.jpeg | Bin [31m0[m -> [32m6838[m bytes
+ ...e5642_ChatGPT_Image_Jun_18_2025_12_17_47_PM.png | Bin [31m1114131[m -> [32m0[m bytes
+ ...r_1_4e463236945a43d08e2fbf3f
