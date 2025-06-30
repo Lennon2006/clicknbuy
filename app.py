@@ -23,6 +23,8 @@ from cloudinary.utils import cloudinary_url
 from sqlalchemy.orm import joinedload
 from sqlalchemy.pool import QueuePool
 import secrets
+from flask_mail import Mail
+from itsdangerous import URLSafeTimedSerializer
 
 
 
@@ -35,11 +37,17 @@ socketio = SocketIO(app, async_mode='threading')
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(16)
 
-
 load_dotenv()
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-REDIRECT_URI = os.getenv("REDIRECT_URI")
+
+#mail configuration 
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.getenv("MAIL_USERNAME")
+app.config['MAIL_PASSWORD'] = os.getenv("MAIL_PASSWORD")
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv("MAIL_DEFAULT_SENDER")  # optional
+
+mail = Mail(app)
 
 
 
@@ -215,11 +223,23 @@ def register():
 
         db.session.add(new_user)
         db.session.commit()
+
+        # Send welcome email
+        try:
+            msg = Message(
+                subject="Welcome to Click N Buy!",
+                recipients=[email],
+                body=f"Hi {username},\n\nThank you for registering at Click N Buy. We're excited to have you on board! Feel free to use Click N Buy for the best outcome! By Namibians, for Namibians\n\nBest regards,\nClick N Buy Team"
+            )
+            mail.send(msg)
+        except Exception as e:
+            print("Failed to send welcome email:", e)
+            # You may choose to flash a warning here or just log the error silently
+
         flash("Registration successful. Please login.", "success")
         return redirect(url_for('login'))
 
     return render_template('register.html')
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -252,47 +272,6 @@ def login():
     )
 
 
-
-@app.route('/google-login/callback', methods=['POST'])
-def google_login_callback():
-    try:
-        # Ensure proper content type and safely extract token
-        if request.is_json:
-            token = request.get_json().get("credential")
-        else:
-            token = request.form.get("credential")
-
-        if not token:
-            return "Missing token", 400
-
-        # Verify token with Google
-        response = requests.get(f"https://oauth2.googleapis.com/tokeninfo?id_token={token}")
-        if response.status_code != 200:
-            return "Invalid token", 400
-
-        data = response.json()
-        email = data.get("email")
-        name = data.get("name") or "GoogleUser"
-
-        if not email:
-            return "Email not found in token", 400
-
-        # Check if user exists
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            user = User(username=name, email=email)
-            db.session.add(user)
-            db.session.commit()
-
-        # Log the user in
-        session['user_id'] = user.id
-        session['username'] = user.username
-        flash("Signed in with Google!", "success")
-        return redirect(url_for('home'))
-
-    except Exception as e:
-        print(f"Google login error: {e}")
-        return "Something went wrong during Google Sign-In", 500
 
 @app.route('/logout')
 def logout():
@@ -865,9 +844,19 @@ def admin_delete_user(user_id):
         flash("You cannot delete your own account.", "warning")
         return redirect(url_for('admin_users'))
 
+    # Delete all conversations where user is buyer or seller
+    conversations = Conversation.query.filter(
+        (Conversation.buyer_id == user.id) | (Conversation.seller_id == user.id)
+    ).all()
+
+    for convo in conversations:
+        db.session.delete(convo)
+
+    # Now delete the user
     db.session.delete(user)
     db.session.commit()
-    flash(f"User {user.username} deleted.", "success")
+
+    flash(f"User {user.username} and related conversations deleted.", "success")
     return redirect(url_for('admin_users'))
 
 

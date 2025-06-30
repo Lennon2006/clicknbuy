@@ -52,7 +52,6 @@
       <h2 class="text-center mb-4">Create Your Account</h2>
 
       <form method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
-        <!-- Profile Picture Preview -->
         <div class="text-center">
           <img id="preview" src="https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg"
                class="profile-pic-preview mx-auto d-block" alt="Preview" />
@@ -109,7 +108,7 @@
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
         alert("Image must be smaller than 2MB.");
-        event.target.value = ""; // Clear the file input
+        event.target.value = "";
         preview.src = "https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg";
         return;
       }
