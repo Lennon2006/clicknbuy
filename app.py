@@ -23,8 +23,9 @@ from cloudinary.utils import cloudinary_url
 from sqlalchemy.orm import joinedload
 from sqlalchemy.pool import QueuePool
 import secrets
-from flask_mail import Mail
+from flask_mail import Mail,Message
 from itsdangerous import URLSafeTimedSerializer
+from flask_sqlalchemy import SQLAlchemy
 
 
 
@@ -75,7 +76,19 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_recycle': 1800     # Recycle stale connections (recommended for long-running apps)
 }
 
-db.init_app(app)
+#NEW DATABASE
+app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://clicknbuy_db_user:pbpT4GY8VlVkKXS5mpw33McX1ZxDEzAV@dpg-d1hit3vdiees73bep82g-a.frankfurt-postgres.render.com/clicknbuy_db"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'poolclass': QueuePool,
+    'pool_size': 5,
+    'max_overflow': 10,
+    'pool_timeout': 30,
+    'pool_recycle': 1800
+}
+
+
+db.init_app(app)  
 migrate = Migrate(app, db)
 
 with app.app_context():
@@ -102,6 +115,34 @@ def admin_required(f):
 
 # Helper functions
 
+def confirm_verification_token(token, expiration=3600):
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    try:
+        email = serializer.loads(token, salt='email-confirm', max_age=expiration)
+    except:
+        return False
+    return email
+
+
+def send_verification_email(user_email, token):
+    link = url_for('verify_email', token=token, _external=True)
+    msg = Message('Click N Buy - Verify Your Email', recipients=[user_email])
+    msg.body = f'''Hi there 👋
+
+Welcome to Click N Buy!
+
+To verify your account, please click the link below:
+{link}
+
+If you did not create this account, feel free to ignore this message.
+'''
+
+    mail.send(msg)
+
+
+def generate_verification_token(email):
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    return serializer.dumps(email, salt='email-confirm')
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -213,18 +254,28 @@ def register():
                 print("Cloudinary upload error:", e)
                 flash("Could not upload profile picture. Default will be used.", "warning")
 
-        # Create user
+        # Create user with unverified status
         new_user = User(
             username=username,
             email=email,
             password_hash=generate_password_hash(password),
-            profile_pic=profile_pic_url
+            profile_pic=profile_pic_url,
+            is_verified=False  # You must have this column in your User model
         )
 
         db.session.add(new_user)
         db.session.commit()
 
-        # Send welcome email
+        # Send email verification
+        try:
+            token = generate_verification_token(new_user.email)
+            send_verification_email(new_user.email, token)
+        except Exception as e:
+            print("Verification email error:", e)
+            flash("Could not send verification email. Please contact support.", "danger")
+            return redirect(url_for('register'))
+
+        # Optional welcome message (can keep or remove if using verification only)
         try:
             msg = Message(
                 subject="Welcome to Click N Buy!",
@@ -234,12 +285,12 @@ def register():
             mail.send(msg)
         except Exception as e:
             print("Failed to send welcome email:", e)
-            # You may choose to flash a warning here or just log the error silently
 
-        flash("Registration successful. Please login.", "success")
+        flash("Registration successful! Please check your email to verify your account.", "info")
         return redirect(url_for('login'))
 
     return render_template('register.html')
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -896,10 +947,34 @@ def admin_toggle_verification(user_id):
     flash(f"User {user.username} is now {status}.", "success")
     return redirect(url_for('admin_users'))
 
+#Verify token
+@app.route('/verify/<token>')
+def verify_email(token):
+    email = confirm_verification_token(token)
+    if not email:
+        flash('Verification link is invalid or has expired.', 'danger')
+        return redirect(url_for('login'))
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash('User not found.', 'danger')
+        return redirect(url_for('login'))
+
+    if user.is_verified:
+        flash('Account already verified. You can log in now.', 'info')
+    else:
+        user.is_verified = True
+        db.session.commit()
+        flash('Email verified successfully! You can now log in.', 'success')
+
+    return redirect(url_for('login'))
+
 
 
 
 if __name__ == '__main__':
-    start_background_threads()
+    with app.app_context():
+        db.create_all()  # Ensures the models are created with the current app context
+        start_background_threads()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
