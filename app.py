@@ -26,7 +26,7 @@ import secrets
 print(secrets.token_hex(16))
 from flask_mail import Mail,Message
 from itsdangerous import URLSafeTimedSerializer,SignatureExpired, BadSignature
-from flask_sqlalchemy import SQLAlchemy
+
 
 
 
