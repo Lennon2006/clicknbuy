@@ -40,7 +40,11 @@ socketio = SocketIO(app, async_mode='threading')
 
 
 load_dotenv()
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(16)
+
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+if not app.config['SECRET_KEY']:
+    raise RuntimeError("SECRET_KEY environment variable not set!")
+
 serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
 
@@ -70,7 +74,9 @@ ALLOWED_EXTENSIONS = {
 }
 
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'ads.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+if not app.config['SQLALCHEMY_DATABASE_URI']:
+    raise RuntimeError("DATABASE_URL environment variable not set!")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'poolclass': QueuePool,
@@ -84,9 +90,9 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 db.init_app(app)  
 migrate = Migrate(app, db)
 
-with app.app_context():
-    db.create_all()
-    print("Total users:", User.query.count())
+# app.app_context():
+ #   db.create_all()
+#    print("Total users:", User.query.count())
 
 #CLOUDINARY 
 cloudinary.config(
