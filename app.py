@@ -23,8 +23,9 @@ from cloudinary.utils import cloudinary_url
 from sqlalchemy.orm import joinedload
 from sqlalchemy.pool import QueuePool
 import secrets
-from flask_mail import Mail
-from itsdangerous import URLSafeTimedSerializer
+print(secrets.token_hex(16))
+from flask_mail import Mail,Message
+from itsdangerous import URLSafeTimedSerializer,SignatureExpired, BadSignature
 from flask_sqlalchemy import SQLAlchemy
 
 
@@ -36,9 +37,12 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 socketio = SocketIO(app, async_mode='threading')
 
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(16)
+
 
 load_dotenv()
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(16)
+serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
 
 #mail configuration 
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
@@ -67,17 +71,6 @@ ALLOWED_EXTENSIONS = {
 
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'ads.db')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'poolclass': QueuePool,
-    'pool_size': 5,            # Max connections in the pool
-    'max_overflow': 10,        # Max overflow connections
-    'pool_timeout': 30,        # Wait time before throwing error
-    'pool_recycle': 1800     # Recycle stale connections (recommended for long-running apps)
-}
-
-#NEW DATABASE
-app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://clicknbuy_db_user:pbpT4GY8VlVkKXS5mpw33McX1ZxDEzAV@dpg-d1hit3vdiees73bep82g-a.frankfurt-postgres.render.com/clicknbuy_db"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'poolclass': QueuePool,
@@ -206,17 +199,27 @@ def register():
     DEFAULT_PROFILE_PIC_URL = 'https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg'
 
     if request.method == 'POST':
-        username = request.form['username'].strip()
-        email = request.form['email'].strip()
-        password = request.form['password']
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
         file = request.files.get('profile_pic')
+
+        # Basic validation
+        if not username or not email or not password or not confirm_password:
+            flash("Please fill in all required fields.", "danger")
+            return redirect(url_for('register'))
+
+        if password != confirm_password:
+            flash("Passwords do not match.", "danger")
+            return redirect(url_for('register'))
 
         # Check if username or email already exists
         if User.query.filter((User.username == username) | (User.email == email)).first():
             flash("Username or email already taken.", "danger")
             return redirect(url_for('register'))
 
-        # Try uploading to Cloudinary if a file is provided
+        # Upload profile pic to Cloudinary if provided
         profile_pic_url = DEFAULT_PROFILE_PIC_URL
         if file and file.filename and '.' in file.filename:
             try:
@@ -226,33 +229,43 @@ def register():
                 print("Cloudinary upload error:", e)
                 flash("Could not upload profile picture. Default will be used.", "warning")
 
-        # Create user
+        # Create user with is_verified = False by default
         new_user = User(
             username=username,
             email=email,
             password_hash=generate_password_hash(password),
-            profile_pic=profile_pic_url
+            profile_pic=profile_pic_url,
+            is_verified=False
         )
 
         db.session.add(new_user)
         db.session.commit()
 
-        # Send welcome email
+        # Generate token for email verification
+        token = serializer.dumps(email, salt='email-confirm')
+
+        # Build verification URL
+        verify_url = url_for('verify_email', token=token, _external=True)
+
+        # Send verification email
         try:
             msg = Message(
-                subject="Welcome to Click N Buy!",
+                subject="Please verify your Click N Buy email",
                 recipients=[email],
-                body=f"Hi {username},\n\nThank you for registering at Click N Buy. We're excited to have you on board! Feel free to use Click N Buy for the best outcome! By Namibians, for Namibians\n\nBest regards,\nClick N Buy Team"
+                body=f"Hi {username},\n\nThanks for registering at Click N Buy! Please verify your email by clicking the link below:\n\n{verify_url}\n\nThis link will expire in 1 hour.\n\nIf you didn't register, just ignore this email."
             )
             mail.send(msg)
         except Exception as e:
-            print("Failed to send welcome email:", e)
-            # You may choose to flash a warning here or just log the error silently
+            print("Failed to send verification email:", e)
+            flash("Failed to send verification email. Please contact support.", "danger")
+            # Optional: Consider deleting the user or retrying email sending here
 
-        flash("Registration successful. Please login.", "success")
+        flash("Registration successful! Please check your email to verify your account.", "success")
         return redirect(url_for('login'))
 
     return render_template('register.html')
+
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -908,6 +921,36 @@ def admin_toggle_verification(user_id):
     db.session.commit()
     flash(f"User {user.username} is now {status}.", "success")
     return redirect(url_for('admin_users'))
+
+#Verify email
+@app.route('/verify_email/<token>')
+def verify_email(token):
+    try:
+        email = serializer.loads(token, salt='email-confirm', max_age=3600)  # 1 hour expiry
+    except SignatureExpired:
+        return render_template('verify_email.html',
+                               title="Verification Link Expired",
+                               message="Sorry, your verification link has expired. Please register again.")
+    except BadSignature:
+        return render_template('verify_email.html',
+                               title="Invalid Verification Link",
+                               message="Sorry, this verification link is invalid.")
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return render_template('verify_email.html',
+                               title="User Not Found",
+                               message="No user found for this verification link.")
+    if user.is_verified:
+        return render_template('verify_email.html',
+                               title="Already Verified",
+                               message="Your email is already verified. You can login now.")
+    
+    user.is_verified = True
+    db.session.commit()
+    return render_template('verify_email.html',
+                           title="Email Verified!",
+                           message="Thank you! Your email has been verified. You can now login.")
 
 
 
