@@ -980,6 +980,10 @@ def verify_email(token):
                            title="Email Verified!",
                            message="Thank you! Your email has been verified. You can now login.")
 
+#Privacy and Policy
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
 
 
 
