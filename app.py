@@ -570,24 +570,44 @@ def edit_ad(ad_id):
 
     return render_template('edit.html', ad=ad, categories=categories)
 
-
 @app.route('/delete/<int:ad_id>', methods=['POST'])
 @login_required
 def delete_ad(ad_id):
     ad = Ad.query.get_or_404(ad_id)
+
     if ad.user_id != int(session['user_id']):
         flash("You do not have permission to delete this ad.", "danger")
         return redirect(url_for('show_ads'))
 
-    for img in ad.images:
-        try:
-            os.remove(os.path.join(app.config['UPLOAD_FOLDER'], img.filename))
-        except Exception as e:
-            print(f"Error deleting image file: {e}")
+    try:
+        # Delete images from Cloudinary
+        for img in ad.images:
+            if img.url:
+                # Extract public_id from Cloudinary URL
+                # Example URL format: https://res.cloudinary.com/<cloud_name>/image/upload/v1234567/folder_name/public_id.jpg
+                public_id = img.url.rsplit('/', 1)[-1].rsplit('.', 1)[0]
+                try:
+                    cloudinary.uploader.destroy(public_id)
+                except Exception as e:
+                    print(f"Cloudinary deletion error for {public_id}: {e}")
 
-    db.session.delete(ad)
-    db.session.commit()
-    flash("Ad deleted.", "info")
+            # Delete local files if you still keep any locally (optional)
+            if img.filename:
+                try:
+                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], img.filename))
+                except Exception as e:
+                    print(f"Local file deletion error for {img.filename}: {e}")
+
+        # Delete the ad, cascades to conversations, messages, ratings, images in DB
+        db.session.delete(ad)
+        db.session.commit()
+
+        flash("Ad deleted successfully.", "info")
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting ad: {e}", "danger")
+
     return redirect(url_for('show_ads'))
 
 @app.route('/ads/<int:ad_id>', methods=['GET', 'POST'])
