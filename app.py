@@ -9,7 +9,6 @@ import uuid
 from datetime import datetime, timedelta
 from threading import Thread
 import time
-from models import db, User, Ad, Image, Rating, ActivityLog, Conversation, Message
 import json
 from sqlalchemy import or_, and_
 from flask_socketio import SocketIO, emit
@@ -26,13 +25,16 @@ import secrets
 print(secrets.token_hex(16))
 from flask_mail import Mail,Message
 from itsdangerous import URLSafeTimedSerializer,SignatureExpired, BadSignature
-
+from flask_sqlalchemy import SQLAlchemy
+from extensions import db
+from models import User, Ad, Image, Rating, ActivityLog, Conversation, Message
 
 
 
 
 
 app = Flask(__name__)
+
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 socketio = SocketIO(app, async_mode='threading')
@@ -87,7 +89,7 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 }
 
 
-db.init_app(app)  
+db.init_app(app)
 migrate = Migrate(app, db)
 
 # app.app_context():

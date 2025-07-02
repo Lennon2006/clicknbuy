@@ -1,10 +1,9 @@
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.sql import func
+from extensions import db  # import shared db instance
 
 
 
-db = SQLAlchemy()
 
 # ------------------ USER MODEL ------------------ #
 class User(db.Model):
