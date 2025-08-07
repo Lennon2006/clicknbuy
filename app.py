@@ -184,9 +184,25 @@ def start_background_threads():
     thread.daemon = True
     thread.start()
 
+def send_verification_email(user_email):
+    token = serializer.dumps(user_email, salt='email-confirm-salt')
+    confirm_url = url_for('confirm_email', token=token, _external=True)
+    html = render_template('email_verification.html', confirm_url=confirm_url)
+    
+    msg = Message('Confirm Your Email', recipients=[user_email])
+    msg.html = html
+    
+    try:
+        mail.send(msg)
+        print(f"Verification email sent to {user_email}")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
+
 @app.teardown_appcontext
 def shutdown_session(exception=None):
     db.session.remove()
+
 
 # Routes
     
@@ -202,6 +218,7 @@ def home():
 
     return render_template('home.html', latest_ads=latest_ads, current_year=current_year)
 
+#REGISTER
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     DEFAULT_PROFILE_PIC_URL = 'https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg'
@@ -250,34 +267,37 @@ def register():
         db.session.commit()
 
         # Generate token for email verification
-        token = serializer.dumps(email, salt='email-confirm')
+        token = serializer.dumps(email, salt='email-confirm-salt')
 
         # Build verification URL
         verify_url = url_for('verify_email', token=token, _external=True)
 
-        # Send verification email
+        # Send verification email inside POST block, after user created
         try:
+            html = render_template('email_verification.html', username=username, verify_url=verify_url)
             msg = Message(
                 subject="Please verify your Click N Buy email",
                 recipients=[email],
-                body=f"Hi {username},\n\nThanks for registering at Click N Buy! Please verify your email by clicking the link below:\n\n{verify_url}\n\nThis link will expire in 1 hour.\n\nIf you didn't register, just ignore this email."
+                html=html
             )
             mail.send(msg)
         except Exception as e:
             print("Failed to send verification email:", e)
             flash("Failed to send verification email. Please contact support.", "danger")
-            # Optional: Consider deleting the user or retrying email sending here
+            # Optional: delete user or retry sending here
 
         flash("Registration successful! Please check your email to verify your account.", "success")
         return redirect(url_for('login'))
 
+    # For GET request, just render registration page
     return render_template('register.html')
 
-
-
+#LOGIN
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        print("Login form submitted")  # Debug print
+
         identifier = request.form.get('username_or_email', '').strip()
         password = request.form.get('password', '')
 
@@ -290,6 +310,10 @@ def login():
         ).first()
 
         if user and check_password_hash(user.password_hash, password):
+            if not user.is_verified:
+                flash("Please verify your email before logging in.", "warning")
+                return redirect(url_for('login'))
+
             session['user_id'] = user.id
             session['username'] = user.username
             log_activity(user.id, "Logged in")
@@ -299,6 +323,8 @@ def login():
             flash("Invalid login details.", "danger")
             return redirect(url_for('login'))
 
+    # GET request
+    print("Rendering login page")  # Debug print
     return render_template(
         'login.html',
         GOOGLE_CLIENT_ID=os.getenv("GOOGLE_CLIENT_ID"),
@@ -984,6 +1010,31 @@ def verify_email(token):
 @app.route('/privacy')
 def privacy():
     return render_template('privacy.html')
+
+
+#AUTH
+@app.route('/confirm/<token>')
+def confirm_email(token):
+    try:
+        email = serializer.loads(token, salt='email-confirm-salt', max_age=3600)  # 1 hour expiry
+    except SignatureExpired:
+        return "The confirmation link has expired."
+    except BadSignature:
+        return "Invalid confirmation token."
+
+    user = User.query.filter_by(email=email).first()
+
+    if user is None:
+        return "User not found."
+
+    if user.is_verified:
+        return "Account already verified."
+
+    user.is_verified = True
+    db.session.commit()
+    flash("Your account has been verified. You can now log in.", "success")
+    return redirect(url_for('login'))  # or wherever you want to redirect them
+
 
 
 
