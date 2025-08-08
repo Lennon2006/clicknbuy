@@ -23,7 +23,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.pool import QueuePool
 import secrets
 print(secrets.token_hex(16))
-from flask_mail import Mail,Message
+from flask_mail import Mail,Message as MailMessage
 from itsdangerous import URLSafeTimedSerializer,SignatureExpired, BadSignature
 from flask_sqlalchemy import SQLAlchemy
 from extensions import db
@@ -275,7 +275,7 @@ def register():
         # Send verification email inside POST block, after user created
         try:
             html = render_template('email_verification.html', username=username, verify_url=verify_url)
-            msg = Message(
+            msg = MailMessage(
                 "Please verify your Click N Buy email",  # subject as first positional argument, no keyword
                 sender=app.config['MAIL_DEFAULT_SENDER'],  # safer
                 recipients=[email],
