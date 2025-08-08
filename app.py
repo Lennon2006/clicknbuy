@@ -190,7 +190,12 @@ def send_verification_email(user_email):
     confirm_url = url_for('confirm_email', token=token, _external=True)
     html = render_template('email_verification.html', confirm_url=confirm_url)
     
-    msg = Message('Confirm Your Email', recipients=[user_email])
+    msg = MailMessage(
+        subject='Confirm Your Email',
+        sender=app.config['MAIL_DEFAULT_SENDER'],  # Add sender here!
+        recipients=[user_email]
+    )
+
     msg.html = html
     
     try:
@@ -198,6 +203,7 @@ def send_verification_email(user_email):
         print(f"Verification email sent to {user_email}")
     except Exception as e:
         print(f"Failed to send email: {e}")
+
 
 
 @app.teardown_appcontext
