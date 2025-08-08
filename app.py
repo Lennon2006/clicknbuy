@@ -186,23 +186,33 @@ def start_background_threads():
     thread.start()
 
 def send_verification_email(user_email):
+    user = User.query.filter_by(email=user_email).first()
+    if not user:
+        print(f"No user found with email: {user_email}")
+        return
+
     token = serializer.dumps(user_email, salt='email-confirm-salt')
-    confirm_url = url_for('confirm_email', token=token, _external=True)
-    html = render_template('email_verification.html', confirm_url=confirm_url)
-    
-    msg = MailMessage(
-        subject='Confirm Your Email',
-        sender=app.config['MAIL_DEFAULT_SENDER'],  # Add sender here!
-        recipients=[user_email]
+    confirm_url = url_for('verify_email', token=token, _external=True)
+
+    html = render_template(
+        'email_verification.html',
+        confirm_url=confirm_url,
+        username=user.username  # Now passes username to the template
     )
 
+    msg = MailMessage(
+        subject='Confirm Your Email',
+        sender=app.config['MAIL_DEFAULT_SENDER'],
+        recipients=[user_email]
+    )
     msg.html = html
-    
+
     try:
         mail.send(msg)
         print(f"Verification email sent to {user_email}")
     except Exception as e:
         print(f"Failed to send email: {e}")
+
 
 
 
@@ -1064,16 +1074,6 @@ def confirm_email(token):
     db.session.commit()
     flash("Your account has been verified. You can now log in.", "success")
     return redirect(url_for('login'))  # or wherever you want to redirect them
-
-#REPORT SCAM
-@app.route('/report-scam/<int:ad_id>', methods=['POST'])
-def report_scam(ad_id):
-    report_details = request.form.get('report_details')
-    user_id = session.get('user_id')
-    # Save the report to your database with ad_id, user_id, details, timestamp, etc.
-    # Or send an email notification to admin
-    flash('Thank you for reporting. We will investigate this issue.', 'success')
-    return redirect(url_for('ad_detail', ad_id=ad_id))
 
 
 
