@@ -1052,30 +1052,6 @@ def privacy():
     return render_template('privacy.html')
 
 
-#AUTH
-@app.route('/confirm/<token>')
-def confirm_email(token):
-    try:
-        email = serializer.loads(token, salt='email-confirm-salt', max_age=3600)  # 1 hour expiry
-    except SignatureExpired:
-        return "The confirmation link has expired."
-    except BadSignature:
-        return "Invalid confirmation token."
-
-    user = User.query.filter_by(email=email).first()
-
-    if user is None:
-        return "User not found."
-
-    if user.is_verified:
-        return "Account already verified."
-
-    user.is_verified = True
-    db.session.commit()
-    flash("Your account has been verified. You can now log in.", "success")
-    return redirect(url_for('login'))  # or wherever you want to redirect them
-
-
 
 if __name__ == '__main__':
     with app.app_context():
