@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -14,122 +15,141 @@
       border: 3px solid #0d6efd;
       margin-bottom: 1rem;
     }
+
     .form-container {
       background: white;
       border-radius: 0.5rem;
       padding: 2rem;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
     }
   </style>
 </head>
+
 <body class="bg-light">
 
-<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
-  <div class="container">
-    <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('show_ads') }}">View Ads</a></li>
-        {% if session.get('user_id') %}
+  <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('show_ads') }}">View Ads</a></li>
+          {% if session.get('user_id') %}
           <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
-        {% else %}
+          {% else %}
           <li class="nav-item"><a class="nav-link active" href="{{ url_for('register') }}">Register</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container my-5">
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-8 col-lg-6 form-container">
+        <h2 class="text-center mb-4">Create Your Account</h2>
+
+        <form method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
+          <div class="text-center">
+            <img id="preview" src="https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg"
+              class="profile-pic-preview mx-auto d-block" alt="Preview" />
+          </div>
+
+          <div class="mb-3">
+            <label for="profile_pic" class="form-label">Profile Picture (optional)</label>
+            <input type="file" class="form-control" id="profile_pic" name="profile_pic" accept="image/*"
+              onchange="previewImage(event)" />
+          </div>
+
+          <div class="mb-3">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" name="username" id="username" class="form-control" required />
+          </div>
+
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" name="email" id="email" class="form-control" required />
+          </div>
+
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" name="password" id="password" class="form-control" required />
+          </div>
+
+          <div class="mb-3">
+            <label for="confirm_password" class="form-label">Confirm Password</label>
+            <input type="password" name="confirm_password" id="confirm_password" class="form-control" required />
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100">Register</button>
+        </form>
+
+        <div class="text-center mt-3">
+          Already have an account?
+          <a href="{{ url_for('login') }}">Login here</a>
+        </div>
+
+        {% if session.get('user_id') %}
+        <div class="text-center mt-3">
+          <a href="{{ url_for('profile') }}" class="btn btn-outline-secondary btn-sm">Back to Profile</a>
+        </div>
         {% endif %}
-      </ul>
+      </div>
     </div>
   </div>
-</nav>
 
-<div class="container my-5">
-  <div class="row justify-content-center">
-    <div class="col-12 col-md-8 col-lg-6 form-container">
-      <h2 class="text-center mb-4">Create Your Account</h2>
+  <!-- Existing registration form fields above -->
 
-      <form method="POST" enctype="multipart/form-data" onsubmit="return validateForm()">
-        <div class="text-center">
-          <img id="preview" src="https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg"
-               class="profile-pic-preview mx-auto d-block" alt="Preview" />
-        </div>
-
-        <div class="mb-3">
-          <label for="profile_pic" class="form-label">Profile Picture (optional)</label>
-          <input type="file" class="form-control" id="profile_pic" name="profile_pic" accept="image/*" onchange="previewImage(event)" />
-        </div>
-
-        <div class="mb-3">
-          <label for="username" class="form-label">Username</label>
-          <input type="text" name="username" id="username" class="form-control" required />
-        </div>
-
-        <div class="mb-3">
-          <label for="email" class="form-label">Email</label>
-          <input type="email" name="email" id="email" class="form-control" required />
-        </div>
-
-        <div class="mb-3">
-          <label for="password" class="form-label">Password</label>
-          <input type="password" name="password" id="password" class="form-control" required />
-        </div>
-
-        <div class="mb-3">
-          <label for="confirm_password" class="form-label">Confirm Password</label>
-          <input type="password" name="confirm_password" id="confirm_password" class="form-control" required />
-        </div>
-
-        <button type="submit" class="btn btn-primary w-100">Register</button>
-      </form>
-
-      <div class="text-center mt-3">
-        Already have an account?
-        <a href="{{ url_for('login') }}">Login here</a>
-      </div>
-
-      {% if session.get('user_id') %}
-      <div class="text-center mt-3">
-        <a href="{{ url_for('profile') }}" class="btn btn-outline-secondary btn-sm">Back to Profile</a>
-      </div>
-      {% endif %}
-    </div>
+  <div class="alert alert-warning mt-4" role="alert" style="font-size: 0.9rem;">
+    <strong>Disclaimer:</strong> Click N Buy is a free online marketplace that connects buyers and sellers across
+    Namibia. We provide the platform to post and find ads, but we do not handle payments, shipments, or guarantees.
+    All transactions are conducted directly between buyers and sellers, and users are responsible for verifying items
+    and completing deals safely.
+    Please use caution when buying or selling, and report suspicious activity through our review and rating system.
+    By using Click N Buy, you agree that we are not liable for any disputes, damages, or losses arising from
+    transactions on the platform.
   </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-  function previewImage(event) {
-    const file = event.target.files[0];
-    const preview = document.getElementById("preview");
+  <button type="submit" class="btn btn-primary w-100 mt-3">Register</button>
 
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("Image must be smaller than 2MB.");
-        event.target.value = "";
-        preview.src = "https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg";
-        return;
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function previewImage(event) {
+      const file = event.target.files[0];
+      const preview = document.getElementById("preview");
+
+      if (file) {
+        if (file.size > 2 * 1024 * 1024) {
+          alert("Image must be smaller than 2MB.");
+          event.target.value = "";
+          preview.src = "https://res.cloudinary.com/dlsx5lfex/image/upload/v1751135009/default-profile.jpg";
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          preview.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
       }
-
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        preview.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
     }
-  }
 
-  function validateForm() {
-    const password = document.getElementById("password").value;
-    const confirm = document.getElementById("confirm_password").value;
-    if (password !== confirm) {
-      alert("Passwords do not match.");
-      return false;
+    function validateForm() {
+      const password = document.getElementById("password").value;
+      const confirm = document.getElementById("confirm_password").value;
+      if (password !== confirm) {
+        alert("Passwords do not match.");
+        return false;
+      }
+      return true;
     }
-    return true;
-  }
-</script>
+  </script>
 </body>
+
 </html>

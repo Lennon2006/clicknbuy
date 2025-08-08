@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -36,7 +37,8 @@
       font-family: 'Poppins', sans-serif;
     }
 
-    .navbar, .card {
+    .navbar,
+    .card {
       background: var(--card);
       color: var(--text);
     }
@@ -85,12 +87,14 @@
       border-radius: 0.5rem 0.5rem 0 0;
     }
 
-    .form-control, .form-select {
+    .form-control,
+    .form-select {
       border-radius: 0.4rem;
       border: 1px solid #ccc;
     }
 
-    .form-control:focus, .form-select:focus {
+    .form-control:focus,
+    .form-select:focus {
       border-color: var(--primary);
       box-shadow: 0 0 5px var(--primary);
     }
@@ -138,21 +142,61 @@
     .dark-toggle:hover {
       background-color: var(--primary-hover);
     }
+
+    /* ——— Navbar dark mode fixes ——— */
+
+    .navbar {
+      background: var(--card);
+      color: var(--text);
+    }
+
+    .navbar .nav-link {
+      color: var(--text);
+    }
+
+    [data-theme='dark'] .navbar {
+      background: var(--card);
+      color: var(--text);
+    }
+
+    [data-theme='dark'] .navbar .nav-link {
+      color: #ddd;
+    }
+
+    [data-theme='dark'] .navbar .nav-link.active {
+      color: var(--primary);
+    }
+
+    .navbar .navbar-brand {
+      color: var(--text);
+    }
+
+    [data-theme='dark'] .navbar .navbar-brand {
+      color: #fff;
+    }
+
+    /* Hamburger icon in dark mode */
+    [data-theme='dark'] .navbar-light .navbar-toggler-icon {
+      filter: brightness(0) invert(1);
+    }
   </style>
 </head>
+
 <body>
 
   <!-- Navbar -->
   <nav class="navbar navbar-expand-lg navbar-light shadow-sm">
     <div class="container">
       <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Toggle navigation">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+        aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
         <ul class="navbar-nav">
           <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
-          <li class="nav-item"><a class="nav-link active" aria-current="page" href="{{ url_for('show_ads') }}">View Ads</a></li>
+          <li class="nav-item"><a class="nav-link active" aria-current="page" href="{{ url_for('show_ads') }}">View
+              Ads</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('post_ad') }}">Post Ad</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
@@ -168,20 +212,14 @@
     <!-- Filters -->
     <form class="row g-3 mb-4" method="get" action="{{ url_for('show_ads') }}">
       <div class="col-md-6">
-        <input
-          type="text"
-          class="form-control"
-          name="q"
-          placeholder="Search ads..."
-          value="{{ request.args.get('q', '') }}"
-          aria-label="Search ads"
-        />
+        <input type="text" class="form-control" name="q" placeholder="Search ads..."
+          value="{{ request.args.get('q', '') }}" aria-label="Search ads" />
       </div>
       <div class="col-md-4">
         <select class="form-select" name="category" aria-label="Filter by category">
           <option value="">All Categories</option>
           {% for cat in categories %}
-            <option value="{{ cat }}" {% if cat == request.args.get('category') %}selected{% endif %}>{{ cat }}</option>
+          <option value="{{ cat }}" {% if cat==request.args.get('category') %}selected{% endif %}>{{ cat }}</option>
           {% endfor %}
         </select>
       </div>
@@ -193,40 +231,33 @@
     <!-- Ads Grid -->
     <div class="row">
       {% if ads %}
-        {% for ad in ads %}
-          <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card ad-card {% if ad.is_featured %}featured{% endif %}">
-              {% if ad.is_featured %}
-                <span class="featured-badge" aria-label="Featured ad">⭐ Featured</span>
-              {% endif %}
+      {% for ad in ads %}
+      <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card ad-card {% if ad.is_featured %}featured{% endif %}">
+          {% if ad.is_featured %}
+          <span class="featured-badge" aria-label="Featured ad">⭐ Featured</span>
+          {% endif %}
 
-              {% if ad.images and ad.images|length > 0 and ad.images[0].url %}
-                <img
-                  src="{{ ad.images[0].url }}"
-                  class="card-img-top ad-image"
-                  alt="Image for {{ ad.title | e }}"
-                  loading="lazy"
-                />
-              {% else %}
-                <img
-                  src="{{ url_for('static', filename='default.jpg') }}"
-                  class="card-img-top ad-image"
-                  alt="Default image placeholder"
-                  loading="lazy"
-                />
-              {% endif %}
+          {% if ad.images and ad.images|length > 0 and ad.images[0].url %}
+          <img src="{{ ad.images[0].url }}" class="card-img-top ad-image" alt="Image for {{ ad.title | e }}"
+            loading="lazy" />
+          {% else %}
+          <img src="{{ url_for('static', filename='default.jpg') }}" class="card-img-top ad-image"
+            alt="Default image placeholder" loading="lazy" />
+          {% endif %}
 
-              <div class="card-body">
-                <h5 class="card-title">{{ ad.title | e }}</h5>
-                <p class="card-text text-muted mb-1">{{ ad.category | e }} | {{ ad.post_type | e }}</p>
-                <p class="card-text fw-bold">N${{ ad.price | e }}</p>
-                <a href="{{ url_for('ad_detail', ad_id=ad.id) }}" class="btn btn-outline-primary btn-sm" aria-label="View details for {{ ad.title | e }}">View Details</a>
-              </div>
-            </div>
+          <div class="card-body">
+            <h5 class="card-title">{{ ad.title | e }}</h5>
+            <p class="card-text text-muted mb-1">{{ ad.category | e }} | {{ ad.post_type | e }}</p>
+            <p class="card-text fw-bold">N${{ ad.price | e }}</p>
+            <a href="{{ url_for('ad_detail', ad_id=ad.id) }}" class="btn btn-outline-primary btn-sm"
+              aria-label="View details for {{ ad.title | e }}">View Details</a>
           </div>
-        {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
       {% else %}
-        <p class="text-center">No ads found.</p>
+      <p class="text-center">No ads found.</p>
       {% endif %}
     </div>
   </main>
@@ -251,4 +282,5 @@
     });
   </script>
 </body>
+
 </html>

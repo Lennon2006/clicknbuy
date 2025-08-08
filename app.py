@@ -1065,6 +1065,15 @@ def confirm_email(token):
     flash("Your account has been verified. You can now log in.", "success")
     return redirect(url_for('login'))  # or wherever you want to redirect them
 
+#REPORT SCAM
+@app.route('/report-scam/<int:ad_id>', methods=['POST'])
+def report_scam(ad_id):
+    report_details = request.form.get('report_details')
+    user_id = session.get('user_id')
+    # Save the report to your database with ad_id, user_id, details, timestamp, etc.
+    # Or send an email notification to admin
+    flash('Thank you for reporting. We will investigate this issue.', 'success')
+    return redirect(url_for('ad_detail', ad_id=ad_id))
 
 
 

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
+
 <head>
   <meta charset="UTF-8" />
   <title>{{ ad.title }} - Click N Buy</title>
@@ -12,19 +13,25 @@
       --text: #111;
       --card: #f9f9f9;
     }
+
     [data-theme='dark'] {
       --bg: #121212;
       --text: #f0f0f0;
       --card: #1e1e1e;
     }
+
     body {
       background: var(--bg);
       color: var(--text);
     }
-    .navbar, .card, .bg-white {
+
+    .navbar,
+    .card,
+    .bg-white {
       background: var(--card) !important;
       color: var(--text);
     }
+
     .ad-images img {
       max-width: 100%;
       max-height: 200px;
@@ -33,6 +40,7 @@
       object-fit: cover;
       cursor: pointer;
     }
+
     .badge-sold {
       background-color: #dc3545;
       color: white;
@@ -41,17 +49,20 @@
       border-radius: 0.375rem;
       margin-left: 1rem;
     }
+
     .seller-info {
       display: flex;
       align-items: center;
       gap: 0.75rem;
       padding: 0.5rem;
     }
+
     .seller-info.border-primary {
       border: 2px solid #0d6efd;
       border-radius: 0.5rem;
       background-color: rgba(13, 110, 253, 0.05);
     }
+
     .seller-pic {
       width: 56px;
       height: 56px;
@@ -60,11 +71,13 @@
       border: 2px solid #198754;
       flex-shrink: 0;
     }
+
     .star-rating {
       color: #ffc107;
       font-size: 1.1rem;
       line-height: 1;
     }
+
     .verified-badge {
       font-size: 1.5rem;
       color: #0d6efd;
@@ -73,14 +86,19 @@
       animation: pulse 2s infinite ease-in-out;
       cursor: default;
     }
+
     @keyframes pulse {
-      0%, 100% {
+
+      0%,
+      100% {
         text-shadow: 0 0 6px #0d6efd;
       }
+
       50% {
         text-shadow: 0 0 12px #0d6efd;
       }
     }
+
     .dark-toggle {
       position: fixed;
       bottom: 20px;
@@ -100,164 +118,158 @@
       cursor: pointer;
       transition: background-color 0.3s ease;
     }
+
     .dark-toggle:hover {
       background-color: #084cd9;
     }
+
     [data-theme='dark'] .modal-content {
       background-color: #1e1e1e;
       color: #f0f0f0;
     }
   </style>
 </head>
+
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-light shadow-sm">
-  <div class="container">
-    <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse d-none d-lg-flex justify-content-end" id="navbarNav">
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('show_ads') }}">View Ads</a></li>
-        {% if session.get('user_id') %}
+  <nav class="navbar navbar-expand-lg navbar-light shadow-sm">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">Click N Buy</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasMenu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse d-none d-lg-flex justify-content-end" id="navbarNav">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('home') }}">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('show_ads') }}">View Ads</a></li>
+          {% if session.get('user_id') %}
           <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}">Logout</a></li>
-        {% else %}
+          {% else %}
           <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
-        {% endif %}
-      </ul>
+          {% endif %}
+        </ul>
+      </div>
     </div>
-  </div>
-</nav>
+  </nav>
 
-<div class="offcanvas offcanvas-start" id="offcanvasMenu">
-  <div class="offcanvas-header">
-    <h5 class="offcanvas-title">Menu</h5>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-  </div>
-  <div class="offcanvas-body">
-    <a href="{{ url_for('home') }}" class="nav-link">Home</a>
-    <a href="{{ url_for('show_ads') }}" class="nav-link">View Ads</a>
-    {% if session.get('user_id') %}
+  <div class="offcanvas offcanvas-start" id="offcanvasMenu">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title">Menu</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+      <a href="{{ url_for('home') }}" class="nav-link">Home</a>
+      <a href="{{ url_for('show_ads') }}" class="nav-link">View Ads</a>
+      {% if session.get('user_id') %}
       <a href="{{ url_for('profile') }}" class="nav-link">Profile</a>
       <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
-    {% else %}
+      {% else %}
       <a href="{{ url_for('login') }}" class="nav-link">Login</a>
-    {% endif %}
+      {% endif %}
+    </div>
   </div>
-</div>
 
-<div class="container my-5">
-  <div class="bg-white p-4 rounded shadow-sm">
-    <div class="row">
-      <div class="col-lg-7">
-        <h2 class="fw-bold">{{ ad.title }}
-          {% if ad.is_sold %}
+  <div class="container my-5">
+    <div class="bg-white p-4 rounded shadow-sm">
+      <div class="row">
+        <div class="col-lg-7">
+          <h2 class="fw-bold">{{ ad.title }}
+            {% if ad.is_sold %}
             <span class="badge-sold">Sold Out</span>
-          {% endif %}
-          {% if ad.is_featured %}
+            {% endif %}
+            {% if ad.is_featured %}
             <span class="badge bg-warning text-dark ms-2">🌟 Featured</span>
-          {% endif %}
-        </h2>
-        <p><strong>Category:</strong> {{ ad.category }}</p>
-        <p><strong>Price:</strong> N${{ ad.price }}</p>
-        <p><strong>Location:</strong> {{ ad.location }}</p>
-        <p><strong>Contact:</strong> {{ ad.contact }}</p>
-        <p><strong>Description:</strong><br>{{ ad.description | e }}</p>
+            {% endif %}
+          </h2>
+          <p><strong>Category:</strong> {{ ad.category }}</p>
+          <p><strong>Price:</strong> N${{ ad.price }}</p>
+          <p><strong>Location:</strong> {{ ad.location }}</p>
+          <p><strong>Contact:</strong> {{ ad.contact }}</p>
+          <p><strong>Description:</strong><br>{{ ad.description | e }}</p>
 
-        <div class="mt-4 ad-images d-flex flex-wrap">
-          {% for image in ad.images %}
+          <div class="mt-4 ad-images d-flex flex-wrap">
+            {% for image in ad.images %}
             <img src="{{ image.url or url_for('static', filename='uploads/' ~ image.filename) }}"
-                 alt="Ad image {{ loop.index }}"
-                 class="me-2 mb-2 rounded"
-                 data-bs-toggle="modal"
-                 data-bs-target="#imageModal"
-                 data-bs-slide-to="{{ loop.index0 }}"
-                 role="button" />
-          {% endfor %}
+              alt="Ad image {{ loop.index }}" class="me-2 mb-2 rounded" data-bs-toggle="modal"
+              data-bs-target="#imageModal" data-bs-slide-to="{{ loop.index0 }}" role="button" />
+            {% endfor %}
+          </div>
         </div>
-      </div>
 
-      <div class="col-lg-5 mt-4 mt-lg-0">
-        <div class="seller-info mb-3 {% if ad.owner.is_verified %}border-primary{% endif %}">
-          <a href="{{ url_for('profile_public', username=ad.owner.username) }}">
-            <img src="{% if ad.owner.profile_pic.startswith('http') %}
+        <div class="col-lg-5 mt-4 mt-lg-0">
+          <div class="seller-info mb-3 {% if ad.owner.is_verified %}border-primary{% endif %}">
+            <a href="{{ url_for('profile_public', username=ad.owner.username) }}">
+              <img src="{% if ad.owner.profile_pic.startswith('http') %}
                          {{ ad.owner.profile_pic }}
                        {% else %}
                          {{ url_for('static', filename='uploads/' ~ ad.owner.profile_pic) }}
-                       {% endif %}" 
-                 class="seller-pic" 
-                 alt="{{ ad.owner.username }} profile picture" />
-          </a>
-          <div>
-            <h5 class="mb-0 d-flex align-items-center">
-              <a href="{{ url_for('profile_public', username=ad.owner.username) }}" class="text-decoration-none text-dark">
-                {{ ad.owner.username }}
-              </a>
-              {% if ad.owner.is_verified %}
-                <span class="verified-badge" data-bs-toggle="tooltip" title="Verified Seller — Trusted Member">&#10004;</span>
+                       {% endif %}" class="seller-pic" alt="{{ ad.owner.username }} profile picture" />
+            </a>
+            <div>
+              <h5 class="mb-0 d-flex align-items-center">
+                <a href="{{ url_for('profile_public', username=ad.owner.username) }}"
+                  class="text-decoration-none text-dark">
+                  {{ ad.owner.username }}
+                </a>
+                {% if ad.owner.is_verified %}
+                <span class="verified-badge" data-bs-toggle="tooltip"
+                  title="Verified Seller — Trusted Member">&#10004;</span>
                 <span class="badge bg-primary ms-2">Verified Seller</span>
-              {% endif %}
-            </h5>
-            {% if ad.owner.is_verified %}
-              <small class="text-muted">Verified since {{ ad.owner.created_at.strftime('%Y-%m-%d') }}</small>
-            {% endif %}
-            <div class="star-rating mt-1">
-              {% for i in range(1, 6) %}
-                {% if i <= (seller_avg_rating|round(0, 'floor') if seller_avg_rating else 0) %}
-                  &#9733;
-                {% else %}
-                  &#9734;
                 {% endif %}
-              {% endfor %}
-              {% if not seller_avg_rating %}
-                <small class="text-muted">No ratings yet</small>
+              </h5>
+              {% if ad.owner.is_verified %}
+              <small class="text-muted">Verified since {{ ad.owner.created_at.strftime('%Y-%m-%d') }}</small>
               {% endif %}
+              <div class="star-rating mt-1">
+                {% for i in range(1, 6) %}
+                {% if i <= (seller_avg_rating|round(0, 'floor' ) if seller_avg_rating else 0) %} &#9733; {% else %}
+                  &#9734; {% endif %} {% endfor %} {% if not seller_avg_rating %} <small class="text-muted">No ratings
+                  yet</small>
+                  {% endif %}
+              </div>
             </div>
           </div>
-        </div>
 
-        {% if session.get('user_id') and session.get('user_id') != ad.user_id and not ad.is_sold %}
+          {% if session.get('user_id') and session.get('user_id') != ad.user_id and not ad.is_sold %}
           <form method="POST" action="{{ url_for('start_conversation', ad_id=ad.id) }}">
             <button type="submit" class="btn btn-success w-100 mt-3">💬 Message Seller</button>
           </form>
-        {% endif %}
+          {% endif %}
 
-        {% if session.get('user_id') == ad.user_id and not ad.is_featured and not ad.is_sold %}
+          {% if session.get('user_id') == ad.user_id and not ad.is_featured and not ad.is_sold %}
           <form action="{{ url_for('feature_ad', ad_id=ad.id) }}" method="POST" class="mt-3">
             <button class="btn btn-warning w-100">🌟 Feature this Ad</button>
           </form>
-        {% elif session.get('user_id') == ad.user_id and ad.is_featured %}
+          {% elif session.get('user_id') == ad.user_id and ad.is_featured %}
           <div class="alert alert-success mt-3 text-center">
             This ad is featured until <strong>{{ ad.feature_expiry.strftime('%Y-%m-%d') }}</strong>
           </div>
-        {% endif %}
+          {% endif %}
+        </div>
       </div>
-    </div>
 
-    <hr class="my-4" />
-    <section>
-      <h4 class="mb-3">Reviews</h4>
-      {% if ratings %}
+      <hr class="my-4" />
+      <section>
+        <h4 class="mb-3">Reviews</h4>
+        {% if ratings %}
         <ul class="list-group">
           {% for rating in ratings %}
-            <li class="list-group-item">
-              <strong>{{ rating.reviewer.username }}</strong> rated it <strong>{{ rating.stars }}/5</strong>
-              {% if rating.comment %}
-                <div class="mt-2 text-muted">"{{ rating.comment }}"</div>
-              {% endif %}
-              <small class="d-block text-muted">{{ rating.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
-            </li>
+          <li class="list-group-item">
+            <strong>{{ rating.reviewer.username }}</strong> rated it <strong>{{ rating.stars }}/5</strong>
+            {% if rating.comment %}
+            <div class="mt-2 text-muted">"{{ rating.comment }}"</div>
+            {% endif %}
+            <small class="d-block text-muted">{{ rating.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+          </li>
           {% endfor %}
         </ul>
-      {% else %}
+        {% else %}
         <p>No reviews yet.</p>
-      {% endif %}
-    </section>
+        {% endif %}
+      </section>
 
-    {% if session.get('user_id') and session.get('user_id') != ad.user_id and not ad.is_sold %}
+      {% if session.get('user_id') and session.get('user_id') != ad.user_id and not ad.is_sold %}
       <hr class="my-4" />
       <section>
         <h4>Leave a Review</h4>
@@ -267,7 +279,7 @@
             <select name="stars" id="stars" class="form-select" required>
               <option value="" disabled selected>Select rating</option>
               {% for i in range(1, 6) %}
-                <option value="{{ i }}">{{ i }}</option>
+              <option value="{{ i }}">{{ i }}</option>
               {% endfor %}
             </select>
           </div>
@@ -278,79 +290,81 @@
           <button type="submit" class="btn btn-primary">Submit Review</button>
         </form>
       </section>
-    {% elif ad.is_sold %}
+      {% elif ad.is_sold %}
       <div class="alert alert-danger mt-4"><strong>This product has been sold.</strong></div>
-    {% endif %}
+      {% endif %}
+    </div>
   </div>
-</div>
 
-<!-- Image Modal Carousel -->
-<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content">
-      <div class="modal-header border-0">
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body p-0">
-        <div id="carouselIndicators" class="carousel slide" data-bs-interval="false">
-          <div class="carousel-inner">
-            {% for image in ad.images %}
+  <!-- Image Modal Carousel -->
+  <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header border-0">
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div id="carouselIndicators" class="carousel slide" data-bs-interval="false">
+            <div class="carousel-inner">
+              {% for image in ad.images %}
               <div class="carousel-item {% if loop.first %}active{% endif %}">
                 <img src="{{ image.url or url_for('static', filename='uploads/' ~ image.filename) }}"
-                     class="d-block w-100 rounded"
-                     alt="Ad image {{ loop.index }}" />
+                  class="d-block w-100 rounded" alt="Ad image {{ loop.index }}" />
               </div>
-            {% endfor %}
+              {% endfor %}
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#carouselIndicators"
+              data-bs-slide="prev">
+              <span class="carousel-control-prev-icon"></span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#carouselIndicators"
+              data-bs-slide="next">
+              <span class="carousel-control-next-icon"></span>
+            </button>
           </div>
-          <button class="carousel-control-prev" type="button" data-bs-target="#carouselIndicators" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon"></span>
-          </button>
-          <button class="carousel-control-next" type="button" data-bs-target="#carouselIndicators" data-bs-slide="next">
-            <span class="carousel-control-next-icon"></span>
-          </button>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- Dark mode toggle -->
-<button class="dark-toggle" id="toggleTheme" title="Toggle dark mode">
-  <i class="fas fa-moon"></i>
-</button>
+  <!-- Dark mode toggle -->
+  <button class="dark-toggle" id="toggleTheme" title="Toggle dark mode">
+    <i class="fas fa-moon"></i>
+  </button>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-  const themeBtn = document.getElementById('toggleTheme');
-  const html = document.documentElement;
-  const savedTheme = localStorage.getItem('theme');
-  if (savedTheme) {
-    html.setAttribute('data-theme', savedTheme);
-    themeBtn.innerHTML = savedTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-  }
-  themeBtn.addEventListener('click', () => {
-    const currentTheme = html.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    html.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-    themeBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-  });
-
-  // Initialize Bootstrap tooltips
-  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-  tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl)
-  });
-
-  // Image modal carousel logic
-  const carousel = bootstrap.Carousel.getOrCreateInstance(document.getElementById('carouselIndicators'), { interval: false });
-  document.querySelectorAll('.ad-images img').forEach(img => {
-    img.addEventListener('click', () => {
-      const index = parseInt(img.getAttribute('data-bs-slide-to'));
-      carousel.to(index);
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const themeBtn = document.getElementById('toggleTheme');
+    const html = document.documentElement;
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      html.setAttribute('data-theme', savedTheme);
+      themeBtn.innerHTML = savedTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+    }
+    themeBtn.addEventListener('click', () => {
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      themeBtn.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     });
-  });
-</script>
+
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
+    // Image modal carousel logic
+    const carousel = bootstrap.Carousel.getOrCreateInstance(document.getElementById('carouselIndicators'), { interval: false });
+    document.querySelectorAll('.ad-images img').forEach(img => {
+      img.addEventListener('click', () => {
+        const index = parseInt(img.getAttribute('data-bs-slide-to'));
+        carousel.to(index);
+      });
+    });
+  </script>
 
 </body>
+
 </html>

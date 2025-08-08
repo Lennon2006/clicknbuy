@@ -9,14 +9,42 @@
   <style>
     body {
       font-family: 'Poppins', sans-serif;
-      background-color: #f8f9fa;
+      background: linear-gradient(135deg, #e0f7fa, #fce4ec);
+      min-height: 100vh;
+    }
 
+    .login-box {
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      opacity: 0;
+      transform: translateY(30px);
+      animation: fadeSlideUp 0.8s forwards ease-out;
+    }
 
+    @keyframes fadeSlideUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    button.btn-primary {
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    button.btn-primary:hover {
+      background-color: #0056b3;
+      transform: scale(1.05);
+    }
+
+    .navbar {
+      z-index: 1;
     }
   </style>
 </head>
 
-<body class="bg-light">
+<body>
 
   <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
     <div class="container">
@@ -42,10 +70,9 @@
 
   <div class="container my-5">
     <div class="row justify-content-center">
-      <div class="col-12 col-md-8 col-lg-6 bg-white p-4 rounded shadow-sm">
+      <div class="col-12 col-md-8 col-lg-6 p-4 login-box">
         <h2 class="mb-4 text-center">Welcome Back</h2>
 
-        <!-- Traditional login form -->
         <form method="POST" action="{{ url_for('login') }}">
           <div class="mb-3">
             <label for="username_or_email" class="form-label">Username or Email</label>
@@ -63,11 +90,10 @@
         <div class="text-center mt-3">
           Don't have an account? <a href="{{ url_for('register') }}">Register here</a>
         </div>
-        <p style="text-align: center;">
+        <p class="text-center mt-2">
           Didn't get a verification email?
           <a href="{{ url_for('resend_verification') }}">Resend it here</a>.
         </p>
-
 
         {% if session.get('user_id') %}
         <div class="text-center mt-3">
