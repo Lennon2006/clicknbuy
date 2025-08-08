@@ -982,7 +982,7 @@ def admin_toggle_verification(user_id):
 @app.route('/verify_email/<token>')
 def verify_email(token):
     try:
-        email = serializer.loads(token, salt='email-confirm', max_age=3600)  # 1 hour expiry
+        email = serializer.loads(token, salt='email-confirm-salt', max_age=3600)  # 1 hour expiry
     except SignatureExpired:
         return render_template('verify_email.html',
                                title="Verification Link Expired",
