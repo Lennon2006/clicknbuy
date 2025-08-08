@@ -1,0 +1,27 @@
+<!-- templates/resend_verification.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Resend Verification Email</title>
+</head>
+
+<body>
+    <h2>Resend Verification Email</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+    <form method="POST">
+        <label for="email">Enter your email address:</label><br>
+        <input type="email" name="email" required><br><br>
+        <input type="submit" value="Resend Email">
+    </form>
+    <br>
+    <a href="{{ url_for('login') }}">Back to login</a>
+</body>
+
+</html>

@@ -1008,6 +1008,28 @@ def verify_email(token):
                            title="Email Verified!",
                            message="Thank you! Your email has been verified. You can now login.")
 
+#RESEND VERIFICATION
+@app.route('/resend_verification', methods=['GET', 'POST'])
+def resend_verification():
+    if request.method == 'POST':
+        email = request.form['email']
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            flash("No account found with that email.", "danger")
+            return redirect(url_for('resend_verification'))
+
+        if user.is_verified:
+            flash("This email is already verified. You can log in.", "info")
+            return redirect(url_for('login'))
+
+        send_verification_email(user.email)
+        flash("A new verification email has been sent. Please check your inbox.", "success")
+        return redirect(url_for('login'))
+
+    return render_template('resend_verification.html')
+
+
 #Privacy and Policy
 @app.route('/privacy')
 def privacy():

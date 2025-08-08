@@ -63,6 +63,11 @@
         <div class="text-center mt-3">
           Don't have an account? <a href="{{ url_for('register') }}">Register here</a>
         </div>
+        <p style="text-align: center;">
+          Didn't get a verification email?
+          <a href="{{ url_for('resend_verification') }}">Resend it here</a>.
+        </p>
+
 
         {% if session.get('user_id') %}
         <div class="text-center mt-3">
