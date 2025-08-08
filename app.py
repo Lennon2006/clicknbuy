@@ -276,8 +276,8 @@ def register():
         try:
             html = render_template('email_verification.html', username=username, verify_url=verify_url)
             msg = Message(
-                subject="Please verify your Click N Buy email",
-                sender="clicknbuyna@gmail.com",  # <-- Make sure this matches your MAIL_DEFAULT_SENDER
+                "Please verify your Click N Buy email",  # subject as first positional argument, no keyword
+                sender=app.config['MAIL_DEFAULT_SENDER'],  # safer
                 recipients=[email],
                 html=html
             )
