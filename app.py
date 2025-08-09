@@ -185,35 +185,45 @@ def start_background_threads():
     thread.daemon = True
     thread.start()
 
+
 def send_verification_email(user_email):
+    """
+    Sends an email verification link to the given user's email address.
+    """
+    # Get the user from the database
     user = User.query.filter_by(email=user_email).first()
     if not user:
         print(f"No user found with email: {user_email}")
-        return
+        return False
 
+    # Create token with expiration
     token = serializer.dumps(user_email, salt='email-confirm-salt')
-    confirm_url = url_for('verify_email', token=token, _external=True)
 
-    html = render_template(
+    # Create the absolute verification URL
+    verify_url = url_for('verify_email', token=token, _external=True)
+
+    # Render the email HTML template
+    html_content = render_template(
         'email_verification.html',
-        confirm_url=confirm_url,
-        username=user.username  # Now passes username to the template
+        username=user.username,
+        verify_url=verify_url
     )
 
+    # Create the email message
     msg = MailMessage(
-        subject='Confirm Your Email',
+        subject="Please Verify Your Click N Buy Email",
         sender=app.config['MAIL_DEFAULT_SENDER'],
-        recipients=[user_email]
+        recipients=[user_email],
+        html=html_content
     )
-    msg.html = html
 
     try:
         mail.send(msg)
         print(f"Verification email sent to {user_email}")
+        return True
     except Exception as e:
-        print(f"Failed to send email: {e}")
-
-
+        print(f"Failed to send verification email: {e}")
+        return False
 
 
 @app.teardown_appcontext
@@ -283,32 +293,18 @@ def register():
         db.session.add(new_user)
         db.session.commit()
 
-        # Generate token for email verification
-        token = serializer.dumps(email, salt='email-confirm-salt')
-
-        # Build verification URL
-        verify_url = url_for('verify_email', token=token, _external=True)
-
-        # Send verification email inside POST block, after user created
-        try:
-            html = render_template('email_verification.html', username=username, verify_url=verify_url)
-            msg = MailMessage(
-                "Please verify your Click N Buy email",  # subject as first positional argument, no keyword
-                sender=app.config['MAIL_DEFAULT_SENDER'],  # safer
-                recipients=[email],
-                html=html
-            )
-            mail.send(msg)
-        except Exception as e:
-            print("Failed to send verification email:", e)
+        # Send verification email using the function
+        email_sent = send_verification_email(email)
+        if not email_sent:
             flash("Failed to send verification email. Please contact support.", "danger")
-            # Optional: delete user or retry sending here
+            # Optional: you can delete the user here if you want, or just let them retry
 
         flash("Registration successful! Please check your email to verify your account.", "success")
         return redirect(url_for('login'))
 
     # For GET request, just render registration page
     return render_template('register.html')
+
 
 #LOGIN
 @app.route('/login', methods=['GET', 'POST'])
@@ -1000,29 +996,29 @@ def verify_email(token):
     try:
         email = serializer.loads(token, salt='email-confirm-salt', max_age=3600)  # 1 hour expiry
     except SignatureExpired:
-        return render_template('verify_email.html',
-                               title="Verification Link Expired",
-                               message="Sorry, your verification link has expired. Please register again.")
+        flash("Sorry, your verification link has expired. Please register again.", "danger")
+        return redirect(url_for('register'))
     except BadSignature:
-        return render_template('verify_email.html',
-                               title="Invalid Verification Link",
-                               message="Sorry, this verification link is invalid.")
+        flash("Invalid verification link.", "danger")
+        return redirect(url_for('register'))
 
     user = User.query.filter_by(email=email).first()
+
     if not user:
-        return render_template('verify_email.html',
-                               title="User Not Found",
-                               message="No user found for this verification link.")
+        flash("No user found for this verification link.", "danger")
+        return redirect(url_for('register'))
+
     if user.is_verified:
-        return render_template('verify_email.html',
-                               title="Already Verified",
-                               message="Your email is already verified. You can login now.")
-    
+        flash("Your email is already verified. You can log in now.", "info")
+        return redirect(url_for('login'))
+
+    # Mark the user as verified
     user.is_verified = True
     db.session.commit()
-    return render_template('verify_email.html',
-                           title="Email Verified!",
-                           message="Thank you! Your email has been verified. You can now login.")
+
+    flash("Thank you! Your email has been verified. You can now log in.", "success")
+    return redirect(url_for('login'))
+
 
 #RESEND VERIFICATION
 @app.route('/resend_verification', methods=['GET', 'POST'])
